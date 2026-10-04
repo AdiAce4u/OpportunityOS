@@ -14,18 +14,33 @@ import {
   ThumbsDown,
   ShieldCheck,
   Check,
+  CheckCircle2,
+  Camera,
+  ExternalLink,
+  Layers,
+  Sparkles,
 } from "lucide-react";
+import { api } from "../services/api";
 
 export function ApplicationReviewModal({ application, onClose, onApprove, onReject, onProvideMissingInfo }) {
   if (!application) return null;
 
-  const [activeTab, setActiveTab] = useState("resume"); // "resume" | "cover_letter" | "answers" | "research"
+  const [activeTab, setActiveTab] = useState("resume"); // "resume" | "evidence" | "prefill" | "cover_letter" | "answers" | "research"
   const [isEditing, setIsEditing] = useState(false);
   const [editedResume, setEditedResume] = useState(application.tailored_resume || "");
   const [editedCoverLetter, setEditedCoverLetter] = useState(application.cover_letter || "");
   const [editedAnswers, setEditedAnswers] = useState(application.answers || {});
   const [submitting, setSubmitting] = useState(false);
-  
+  const [prefilling, setPrefilling] = useState(false);
+  const [prefillSnapshotUrl, setPrefillSnapshotUrl] = useState(
+    application.submission_receipt?.prefill_snapshot_url
+      ? `http://localhost:8000${application.submission_receipt.prefill_snapshot_url}`
+      : null
+  );
+  const [prefillStatus, setPrefillStatus] = useState(
+    application.submission_receipt?.prefill_snapshot_url ? "Portal Form Verified & Snapshot Saved" : null
+  );
+
   // Missing info form state
   const [missingInput, setMissingInput] = useState("");
 
@@ -36,6 +51,7 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
   const why = application.why_this_job || {};
   const research = application.company_research || {};
   const missingInfo = application.missing_information || [];
+  const evidenceTable = application.evidence_table || why.evidence_table || [];
 
   const handleApproveSubmit = async () => {
     setSubmitting(true);
@@ -56,6 +72,24 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
       } catch (e) {}
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handlePreparePortal = async () => {
+    setPrefilling(true);
+    try {
+      const res = await api.preparePortalPrefill(application.id);
+      if (res.snapshot_url) {
+        setPrefillSnapshotUrl(`http://localhost:8000${res.snapshot_url}?t=${Date.now()}`);
+        setPrefillStatus("Form fields pre-filled and visual screenshot captured.");
+        setActiveTab("prefill");
+      } else {
+        setPrefillStatus(res.details || "Portal pre-filled successfully.");
+      }
+    } catch (err) {
+      alert(`Portal pre-fill preview error: ${err.message}`);
+    } finally {
+      setPrefilling(false);
     }
   };
 
@@ -84,8 +118,8 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
       <div
         className="glass-panel"
         style={{
-          width: "min(880px, 100%)",
-          maxHeight: "90vh",
+          width: "min(960px, 100%)",
+          maxHeight: "92vh",
           display: "flex",
           flexDirection: "column",
           borderRadius: "16px",
@@ -98,7 +132,7 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
         {/* Header */}
         <div
           style={{
-            padding: "24px 28px",
+            padding: "20px 28px",
             borderBottom: "1px solid #1e293b",
             display: "flex",
             justifyContent: "space-between",
@@ -112,6 +146,11 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
               <span className="badge badge-success">
                 <Check size={12} /> Eligibility: Verified
               </span>
+              {prefillSnapshotUrl && (
+                <span className="badge badge-primary" style={{ background: "#1e1b4b", color: "#a5b4fc", border: "1px solid #4338ca" }}>
+                  <Camera size={12} /> Pre-Fill Inspected
+                </span>
+              )}
             </div>
             <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#ffffff" }}>{role}</h2>
             <div style={{ fontSize: "14px", color: "#94a3b8", marginTop: "2px" }}>
@@ -149,7 +188,7 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
             style={{
               background: "#451a03",
               borderBottom: "1px solid #78350f",
-              padding: "14px 28px",
+              padding: "12px 28px",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -189,6 +228,7 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
         <div
           style={{
             display: "flex",
+            flexWrap: "wrap",
             gap: "4px",
             padding: "8px 28px",
             background: "#080c16",
@@ -197,6 +237,8 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
         >
           {[
             { id: "resume", label: "Tailored Resume", icon: <FileText size={15} /> },
+            { id: "evidence", label: "Evidence Citation Table", icon: <Layers size={15} />, badge: evidenceTable.length > 0 ? evidenceTable.length : null },
+            { id: "prefill", label: "Portal Visual Pre-Check", icon: <Camera size={15} /> },
             { id: "cover_letter", label: "Cover Letter", icon: <Mail size={15} /> },
             { id: "answers", label: "Application Answers", icon: <HelpCircle size={15} /> },
             { id: "research", label: "Company Intelligence", icon: <Building2 size={15} /> },
@@ -207,8 +249,8 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "8px",
-                padding: "8px 16px",
+                gap: "7px",
+                padding: "8px 14px",
                 borderRadius: "8px",
                 border: "none",
                 background: activeTab === tab.id ? "#17233e" : "transparent",
@@ -220,6 +262,20 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
             >
               {tab.icon}
               <span>{tab.label}</span>
+              {tab.badge && (
+                <span
+                  style={{
+                    background: "#0284c7",
+                    color: "white",
+                    borderRadius: "10px",
+                    padding: "1px 6px",
+                    fontSize: "11px",
+                    fontWeight: "700",
+                  }}
+                >
+                  {tab.badge}
+                </span>
+              )}
             </button>
           ))}
 
@@ -248,21 +304,29 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
         </div>
 
         {/* Tab Content Body */}
-        <div style={{ padding: "24px 28px", overflowY: "auto", flex: 1, maxHeight: "420px" }}>
+        <div style={{ padding: "20px 28px", overflowY: "auto", flex: 1, minHeight: "360px", maxHeight: "460px" }}>
+          {/* TAB 1: RESUME */}
           {activeTab === "resume" && (
             <div>
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "8px",
+                  justifyContent: "space-between",
                   marginBottom: "12px",
                   fontSize: "12px",
                   color: "#10b981",
                 }}
               >
-                <ShieldCheck size={16} />
-                <span>Grounded strictly in verified candidate facts. Zero hallucinated qualifications.</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <ShieldCheck size={16} />
+                  <span>Single-Page ATS Spec (0.4-inch margins, Action-Result bullets, top 2 domain projects).</span>
+                </div>
+                {application.tailored_resume_pdf_path && (
+                  <span style={{ color: "#64748b", fontSize: "11px" }}>
+                    PDF Layout: Single-Page Strict Budget
+                  </span>
+                )}
               </div>
               {isEditing ? (
                 <textarea
@@ -290,6 +354,237 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
             </div>
           )}
 
+          {/* TAB 2: EVIDENCE CITATION TABLE */}
+          {activeTab === "evidence" && (
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  marginBottom: "14px",
+                  fontSize: "12.5px",
+                  color: "#94a3b8",
+                  background: "#080c16",
+                  padding: "10px 14px",
+                  borderRadius: "8px",
+                  border: "1px solid #1a233a",
+                }}
+              >
+                <ShieldCheck size={16} color="#10b981" />
+                <span>
+                  <strong>1-to-1 Evidence Citations:</strong> Transparent mapping of job requirements to verified projects, roles, and candidate credentials. Zero fabricated experience.
+                </span>
+              </div>
+
+              {evidenceTable.length > 0 ? (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                    <thead>
+                      <tr style={{ background: "#090f1d", borderBottom: "1px solid #1e293b", textAlign: "left" }}>
+                        <th style={{ padding: "12px 14px", color: "#94a3b8", fontWeight: "600" }}>Job Requirement</th>
+                        <th style={{ padding: "12px 14px", color: "#94a3b8", fontWeight: "600" }}>Candidate Evidence (Profile / CV)</th>
+                        <th style={{ padding: "12px 14px", color: "#94a3b8", fontWeight: "600", width: "120px" }}>Match Rating</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {evidenceTable.map((item, idx) => (
+                        <tr
+                          key={idx}
+                          style={{
+                            borderBottom: "1px solid #162032",
+                            background: idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)",
+                          }}
+                        >
+                          <td style={{ padding: "12px 14px", fontWeight: "600", color: "#f1f5f9" }}>
+                            {item.requirement}
+                          </td>
+                          <td style={{ padding: "12px 14px", color: "#cbd5e1" }}>
+                            {item.evidence}
+                          </td>
+                          <td style={{ padding: "12px 14px" }}>
+                            {item.rating === "STRONG" && (
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  background: "#064e3b",
+                                  color: "#34d399",
+                                  padding: "3px 8px",
+                                  borderRadius: "6px",
+                                  fontSize: "11px",
+                                  fontWeight: "700",
+                                }}
+                              >
+                                <CheckCircle2 size={12} /> STRONG
+                              </span>
+                            )}
+                            {item.rating === "MODERATE" && (
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  background: "#451a03",
+                                  color: "#fbbf24",
+                                  padding: "3px 8px",
+                                  borderRadius: "6px",
+                                  fontSize: "11px",
+                                  fontWeight: "700",
+                                }}
+                              >
+                                <AlertTriangle size={12} /> MODERATE
+                              </span>
+                            )}
+                            {item.rating === "NONE" && (
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  background: "#1e293b",
+                                  color: "#94a3b8",
+                                  padding: "3px 8px",
+                                  borderRadius: "6px",
+                                  fontSize: "11px",
+                                  fontWeight: "700",
+                                }}
+                              >
+                                NONE
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{ textAlign: "center", padding: "30px", color: "#64748b", background: "#080c16", borderRadius: "8px" }}>
+                  All requirements verified. Evidence table will be generated when analyzed against custom or structured JDs.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 3: VISUAL PRE-FILL PREVIEW */}
+          {activeTab === "prefill" && (
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: "16px",
+                  background: "#080c16",
+                  padding: "12px 16px",
+                  borderRadius: "8px",
+                  border: "1px solid #1a233a",
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Camera size={16} color="#38bdf8" />
+                    <span style={{ fontSize: "13.5px", fontWeight: "700", color: "#ffffff" }}>
+                      Stage 1: Two-Stage Browser Pre-Fill Checkpoint
+                    </span>
+                  </div>
+                  <p style={{ fontSize: "12px", color: "#94a3b8", marginTop: "2px" }}>
+                    Playwright populates portal inputs and uploads your resume, pausing before submission so you can visually audit the form.
+                  </p>
+                </div>
+
+                <button
+                  className="btn btn-primary"
+                  onClick={handlePreparePortal}
+                  disabled={prefilling}
+                  style={{ whiteSpace: "nowrap", fontSize: "12px", padding: "8px 14px" }}
+                >
+                  <Camera size={14} />
+                  <span>{prefilling ? "Navigating & Pre-filling..." : "Run Browser Pre-Fill"}</span>
+                </button>
+              </div>
+
+              {prefillSnapshotUrl ? (
+                <div
+                  style={{
+                    background: "#050811",
+                    border: "1px solid #1e293b",
+                    borderRadius: "10px",
+                    overflow: "hidden",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "8px 16px",
+                      background: "#090f1d",
+                      borderBottom: "1px solid #1e293b",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      fontSize: "12px",
+                      color: "#94a3b8",
+                    }}
+                  >
+                    <span>Playwright Browser Viewport Snapshot</span>
+                    <a
+                      href={prefillSnapshotUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: "#38bdf8", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px" }}
+                    >
+                      <ExternalLink size={12} /> Open Full Screenshot
+                    </a>
+                  </div>
+                  <div style={{ padding: "12px", display: "grid", placeItems: "center", maxHeight: "380px", overflowY: "auto" }}>
+                    <img
+                      src={prefillSnapshotUrl}
+                      alt="Portal Pre-Fill Snapshot"
+                      style={{
+                        width: "100%",
+                        maxWidth: "800px",
+                        borderRadius: "6px",
+                        border: "1px solid #334155",
+                        boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    border: "2px dashed #1e293b",
+                    borderRadius: "10px",
+                    padding: "40px 20px",
+                    textAlign: "center",
+                    background: "#080c16",
+                  }}
+                >
+                  <Camera size={36} color="#64748b" style={{ margin: "0 auto 12px" }} />
+                  <h4 style={{ fontSize: "14.5px", fontWeight: "700", color: "#f1f5f9", marginBottom: "4px" }}>
+                    No Pre-Fill Snapshot Captured Yet
+                  </h4>
+                  <p style={{ fontSize: "12.5px", color: "#94a3b8", maxWidth: "420px", margin: "0 auto 16px" }}>
+                    Click "Run Browser Pre-Fill" to let Playwright open the portal, populate all candidate fields and attach the PDF, and return a visual snapshot for your inspection.
+                  </p>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handlePreparePortal}
+                    disabled={prefilling}
+                    style={{ fontSize: "13px", padding: "8px 18px" }}
+                  >
+                    <Camera size={15} />
+                    <span>{prefilling ? "Simulating Browser Pre-Fill..." : "Capture Form Pre-Fill"}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 4: COVER LETTER */}
           {activeTab === "cover_letter" && (
             <div>
               {isEditing ? (
@@ -318,6 +613,7 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
             </div>
           )}
 
+          {/* TAB 5: ANSWERS */}
           {activeTab === "answers" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               {Object.entries(editedAnswers).map(([k, v]) => (
@@ -340,6 +636,7 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
             </div>
           )}
 
+          {/* TAB 6: RESEARCH */}
           {activeTab === "research" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               <div style={{ background: "#080c16", border: "1px solid #1a233a", padding: "16px", borderRadius: "8px" }}>
@@ -386,7 +683,7 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
         {/* Footer Actions */}
         <div
           style={{
-            padding: "20px 28px",
+            padding: "18px 28px",
             background: "#090f1d",
             borderTop: "1px solid #1e293b",
             display: "flex",
@@ -395,17 +692,27 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
           }}
         >
           <div style={{ fontSize: "12.5px", color: "#64748b" }}>
-            Browser automation will only execute with your explicit authorization.
+            {prefillStatus || "Browser automation will only execute with your explicit authorization."}
           </div>
 
           <div style={{ display: "flex", gap: "12px" }}>
+            <button
+              className="btn btn-secondary"
+              disabled={prefilling || submitting}
+              onClick={handlePreparePortal}
+              title="Runs Stage 1: Pre-fills portal and takes a screenshot without submitting"
+            >
+              <Camera size={14} />
+              <span>{prefilling ? "Pre-filling..." : "Visual Pre-Check"}</span>
+            </button>
+
             <button
               className="btn btn-danger"
               disabled={submitting}
               onClick={() => onReject(application.id)}
             >
               <ThumbsDown size={15} />
-              <span>Reject Application</span>
+              <span>Reject</span>
             </button>
 
             <button

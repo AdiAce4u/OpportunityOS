@@ -1,7 +1,7 @@
 import React from "react";
 import { MapPin, DollarSign, Check, AlertCircle, ArrowUpRight, Award } from "lucide-react";
 
-export function TopOpportunities({ jobs = [], onSelectJob, onOpenReview }) {
+export function TopOpportunities({ jobs = [], onSelectJob, onOpenReview, onOpenCustomJD }) {
   return (
     <div className="card" style={{ padding: "20px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
@@ -9,7 +9,18 @@ export function TopOpportunities({ jobs = [], onSelectJob, onOpenReview }) {
           <Award size={18} color="#818cf8" />
           <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#f8fafc" }}>Top Opportunities</h3>
         </div>
-        <span style={{ fontSize: "12px", color: "#64748b" }}>Ranked by Multi-Factor Fit</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {onOpenCustomJD && (
+            <button
+              className="btn btn-secondary"
+              style={{ fontSize: "11px", padding: "4px 10px", height: "auto" }}
+              onClick={onOpenCustomJD}
+            >
+              + Paste Custom JD
+            </button>
+          )}
+          <span style={{ fontSize: "12px", color: "#64748b" }}>Ranked by Multi-Factor Fit</span>
+        </div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>

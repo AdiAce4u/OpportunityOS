@@ -43,9 +43,69 @@ def check_eligibility(job: dict[str, Any], user_profile: dict[str, Any]) -> tupl
 
     return True, "Eligible"
 
+def generate_evidence_table(job: dict[str, Any], user_profile: dict[str, Any]) -> list[dict[str, str]]:
+    """
+    Constructs a transparent 1-to-1 evidence citation table mapping each job requirement
+    to verified candidate project, internship, or coursework achievements.
+    Rating Rubric:
+    - STRONG: Direct implementation in a named project or professional work experience.
+    - MODERATE: Confirmed skill listed in candidate credentials.
+    - NONE: No verified evidence found in profile.
+    """
+    user_skills = {s.lower().strip() for s in (user_profile.get("skills") or [])}
+    projects = user_profile.get("projects") or []
+    experience = user_profile.get("experience") or []
+    
+    req_skills = job.get("required_skills") or []
+    pref_skills = job.get("preferred_skills") or []
+    targets = req_skills + [p for p in pref_skills if p not in req_skills][:2]
+    
+    table = []
+    for req in targets:
+        req_clean = req.strip()
+        req_lower = req_clean.lower()
+        
+        evidence_found = None
+        rating = "NONE"
+        
+        # 1. Search in projects (strongest proof)
+        for p in projects:
+            p_text = f"{p.get('name', '')} {' '.join(p.get('tech_stack', []))} {p.get('description', '')}".lower()
+            if req_lower in p_text:
+                evidence_found = f"{p.get('name')} project"
+                rating = "STRONG"
+                break
+                
+        # 2. Search in work experience
+        if not evidence_found:
+            for e in experience:
+                e_text = f"{e.get('role', '')} {e.get('company', '')} {e.get('description', '')}".lower()
+                if req_lower in e_text:
+                    evidence_found = f"{e.get('role')} at {e.get('company')}"
+                    rating = "STRONG"
+                    break
+                    
+        # 3. Search in general skills competency
+        if not evidence_found:
+            if req_lower in user_skills:
+                evidence_found = "Verified technical competency in profile"
+                rating = "MODERATE"
+            else:
+                evidence_found = "No project or production evidence found"
+                rating = "NONE"
+                
+        table.append({
+            "requirement": req_clean,
+            "evidence": evidence_found,
+            "rating": rating
+        })
+        
+    return table
+
 def calculate_job_match(job: dict[str, Any], user_profile: dict[str, Any]) -> dict[str, Any]:
     """
-    Computes a multi-dimensional match score and generates the 'Why this job?' explanation.
+    Computes a multi-dimensional match score and generates the 'Why this job?' explanation
+    and evidence citation table.
     """
     user_skills = {s.lower().strip() for s in (user_profile.get("skills") or [])}
     req_skills = [s.strip() for s in (job.get("required_skills") or [])]
@@ -58,6 +118,9 @@ def calculate_job_match(job: dict[str, Any], user_profile: dict[str, Any]) -> di
     present_skills = [s for s in req_skills if s.lower() in user_skills]
     missing_skills = [s for s in req_skills if s.lower() not in user_skills]
     present_preferred = [s for s in pref_skills if s.lower() in user_skills]
+    
+    # Generate Evidence Citation Table
+    evidence_table = generate_evidence_table(job, user_profile)
     
     # 1. Skill Match (50% weight)
     matched_req_count = len(req_lower & user_skills)
@@ -117,6 +180,7 @@ def calculate_job_match(job: dict[str, Any], user_profile: dict[str, Any]) -> di
         "required_present": present_skills,
         "missing": missing_skills,
         "preferred_present": present_preferred,
+        "evidence_table": evidence_table,
         "highlights": [
             f"{len(present_skills)} of {len(req_skills)} required technical skills directly proven",
             f"Education directly aligns with {user_profile.get('degree', 'degree')} at {user_profile.get('college', 'college')}",
@@ -128,5 +192,6 @@ def calculate_job_match(job: dict[str, Any], user_profile: dict[str, Any]) -> di
         "overall_score": overall,
         "breakdown": breakdown,
         "reason": reason,
-        "why_this_job": why_this_job
+        "why_this_job": why_this_job,
+        "evidence_table": evidence_table
     }

@@ -27,3 +27,10 @@ class JobSearchQuery(BaseModel):
     location: str | None = None
     roles: list[str] = Field(default_factory=list)
     min_salary: float | None = None
+
+class CustomJDAnalysisRequest(BaseModel):
+    jd_text: str
+    title: str = ""
+    company: str = ""
+    profile_id: int | None = None
+

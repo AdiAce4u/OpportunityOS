@@ -13,6 +13,7 @@ import { ApplicationReviewModal } from "./components/ApplicationReviewModal";
 import { ApplicationsTable } from "./components/ApplicationsTable";
 import { ProfileEditor } from "./components/ProfileEditor";
 import { InterviewPrepModal } from "./components/InterviewPrepModal";
+import { CustomJDModal } from "./components/CustomJDModal";
 
 import {
   Sparkles,
@@ -39,6 +40,7 @@ function OpportunityOSApp() {
   const [selectedApp, setSelectedApp] = useState(null);
   const [interviewEvent, setInterviewEvent] = useState(null);
   const [interviewPrep, setInterviewPrep] = useState(null);
+  const [isCustomJDOpen, setIsCustomJDOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
   const showToast = (msg) => {
@@ -247,6 +249,7 @@ function OpportunityOSApp() {
           onRunAgent={handleRunAgent}
           onStopAgent={handleStopAgent}
           onRefresh={loadData}
+          onOpenCustomJD={() => setIsCustomJDOpen(true)}
           activeGoal="Robotics or AI Internships in India (≥₹40,000/mo)"
         />
 
@@ -326,6 +329,7 @@ function OpportunityOSApp() {
               <div className="split-grid">
                 <TopOpportunities
                   jobs={applications.length > 0 ? applications : jobs}
+                  onOpenCustomJD={() => setIsCustomJDOpen(true)}
                   onOpenReview={(job) => {
                     const matchedApp = applications.find((a) => a.job_id === job.id || a.title === job.title);
                     if (matchedApp) {
@@ -398,6 +402,7 @@ function OpportunityOSApp() {
               </div>
               <TopOpportunities
                 jobs={jobs}
+                onOpenCustomJD={() => setIsCustomJDOpen(true)}
                 onSelectJob={(job) => {
                   const matched = applications.find((a) => a.job_id === job.id);
                   if (matched) handleOpenApplication(matched.id);
@@ -489,6 +494,17 @@ function OpportunityOSApp() {
           onClose={() => setInterviewEvent(null)}
         />
       )}
+
+      {/* Custom JD Analyzer Modal */}
+      <CustomJDModal
+        isOpen={isCustomJDOpen}
+        onClose={() => setIsCustomJDOpen(false)}
+        profileId={profile?.id}
+        onJobCreated={async (result) => {
+          await loadData();
+          showToast(`Custom JD "${result.job?.title}" parsed & analyzed successfully!`);
+        }}
+      />
     </div>
   );
 }

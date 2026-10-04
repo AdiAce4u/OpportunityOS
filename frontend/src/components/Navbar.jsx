@@ -1,7 +1,7 @@
 import React from "react";
 import { Sparkles, Play, StopCircle, RefreshCw, ShieldCheck } from "lucide-react";
 
-export function Navbar({ running, onRunAgent, onStopAgent, onRefresh, activeGoal }) {
+export function Navbar({ running, onRunAgent, onStopAgent, onRefresh, activeGoal, onOpenCustomJD }) {
   return (
     <header className="top-navbar">
       <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
@@ -42,6 +42,16 @@ export function Navbar({ running, onRunAgent, onStopAgent, onRefresh, activeGoal
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <button
+          className="btn btn-secondary"
+          onClick={onOpenCustomJD}
+          title="Paste & Analyze any external Job Description"
+          style={{ padding: "8px 14px", display: "flex", alignItems: "center", gap: "6px" }}
+        >
+          <Sparkles size={14} color="#38bdf8" />
+          <span>Analyze Custom JD</span>
+        </button>
+
         <button
           className="btn btn-secondary"
           onClick={onRefresh}

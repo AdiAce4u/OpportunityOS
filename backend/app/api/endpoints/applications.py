@@ -48,6 +48,7 @@ def get_application(application_id: int, db: Session = Depends(get_db)):
         "match_breakdown": row.match_breakdown or {},
         "match_reason": row.match_reason,
         "why_this_job": row.why_this_job or {},
+        "evidence_table": (row.why_this_job or {}).get("evidence_table", []),
         "company_research": row.company_research or (job.company_research if job else {}),
         "tailored_resume": row.tailored_resume,
         "tailored_resume_pdf_path": row.tailored_resume_pdf_path,
@@ -145,6 +146,54 @@ def provide_missing_info(application_id: int, request: ProvideMissingInfoRequest
     row.missing_information = []
     db.commit()
     return {"status": "UPDATED", "answers": row.answers}
+
+@router.post("/{application_id}/prepare-portal")
+def prepare_portal(application_id: int, db: Session = Depends(get_db)):
+    """
+    Phase 3: Two-stage browser automation - Step 1: Pre-fill & Snapshot
+    Loads the job application portal, fills form fields and attaches tailored resume,
+    captures a visual snapshot (screenshot) for human review before final submission.
+    """
+    from app.tools.browser_tools import prepare_portal_prefill_sync
+    
+    row = db.get(Application, application_id)
+    if not row:
+        raise HTTPException(404, "Application not found")
+        
+    job = db.get(Job, row.job_id)
+    profile = db.get(UserProfile, row.profile_id) if row.profile_id else db.query(UserProfile).first()
+    
+    job_url = (job.url if (job and job.url) else "http://localhost:8000/portal/apply/job-001")
+    
+    form_data = {
+        "name": profile.name if profile else "Candidate",
+        "email": profile.email if profile else "demo@example.com",
+        "phone": profile.phone if profile else "+91 9876543210",
+        "college": profile.college if profile else "Engineering College",
+        "degree": profile.degree if profile else "B.Tech",
+        "cover_letter": row.cover_letter or "",
+        "answers": row.answers or {},
+    }
+    
+    result = prepare_portal_prefill_sync(
+        url=job_url,
+        form_data=form_data,
+        resume_path=row.tailored_resume_pdf_path or "",
+        app_id=row.id
+    )
+    
+    # Update application record with prefill snapshot
+    receipt = dict(row.submission_receipt or {})
+    if result.get("snapshot_url"):
+        receipt["prefill_snapshot_url"] = result.get("snapshot_url")
+    row.submission_receipt = receipt
+    db.commit()
+    
+    return {
+        "status": result.get("status", "PORTAL_PREFILLED"),
+        "snapshot_url": result.get("snapshot_url", ""),
+        "details": result.get("details", "")
+    }
 
 @router.get("/{application_id}/resume-pdf")
 def download_resume_pdf(application_id: int, db: Session = Depends(get_db)):

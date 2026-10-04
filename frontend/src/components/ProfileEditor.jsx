@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Upload, CheckCircle2, User, BookOpen, MapPin, DollarSign, ShieldCheck, Plus, X } from "lucide-react";
 import { api } from "../services/api";
 
@@ -27,6 +27,12 @@ export function ProfileEditor({ profile, onSaveProfile }) {
     avoid_companies: [],
   });
 
+  useEffect(() => {
+    if (profile) {
+      setFormData(profile);
+    }
+  }, [profile]);
+
   const [newSkill, setNewSkill] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState("");
@@ -37,18 +43,30 @@ export function ProfileEditor({ profile, onSaveProfile }) {
     setUploading(true);
     setUploadMsg("Parsing PDF resume with AI extractor...");
     try {
-      const res = await api.uploadResume(file);
-      setFormData((prev) => ({
-        ...prev,
-        email: res.extracted_email || prev.email,
-        phone: res.extracted_phone || prev.phone,
-        graduation_year: res.extracted_graduation_year || prev.graduation_year,
-        skills: Array.from(new Set([...(prev.skills || []), ...(res.extracted_skills || [])])),
-        resume_text: res.resume_text || prev.resume_text,
-      }));
-      setUploadMsg(`✓ Successfully parsed ${file.name}! Skills and metadata updated.`);
+      const res = await api.uploadResume(file, formData?.id);
+      if (res.profile) {
+        setFormData(res.profile);
+        if (onSaveProfile) {
+          onSaveProfile(res.profile);
+        }
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          name: res.extracted_name || prev.name,
+          email: res.extracted_email || prev.email,
+          phone: res.extracted_phone || prev.phone,
+          college: res.extracted_college || prev.college,
+          degree: res.extracted_degree || prev.degree,
+          graduation_year: res.extracted_graduation_year || prev.graduation_year,
+          cgpa: res.extracted_cgpa !== undefined && res.extracted_cgpa !== null ? res.extracted_cgpa : prev.cgpa,
+          skills: Array.from(new Set([...(prev.skills || []), ...(res.extracted_skills || [])])),
+          projects: res.extracted_projects?.length ? res.extracted_projects : prev.projects,
+          experience: res.extracted_experience?.length ? res.extracted_experience : prev.experience,
+        }));
+      }
+      setUploadMsg(`✓ Successfully parsed ${file.name}! Profile details and database updated.`);
     } catch (err) {
-      setUploadMsg("Upload failed. Please ensure backend is running.");
+      setUploadMsg(`Upload failed: ${err.message}`);
     } finally {
       setUploading(false);
     }
