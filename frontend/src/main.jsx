@@ -6,8 +6,6 @@ import { api } from "./services/api";
 import { Navbar } from "./components/Navbar";
 import { Sidebar } from "./components/Sidebar";
 import { StatsOverview } from "./components/StatsOverview";
-import { AgentPipeline } from "./components/AgentPipeline";
-import { AgentActivityLog } from "./components/AgentActivityLog";
 import { TopOpportunities } from "./components/TopOpportunities";
 import { ApplicationReviewModal } from "./components/ApplicationReviewModal";
 import { ApplicationsTable } from "./components/ApplicationsTable";
@@ -148,14 +146,88 @@ function OpportunityOSApp() {
     } catch (e) {}
   };
 
-  const handleOpenApplication = async (appId) => {
+  const handleOpenApplication = async (appIdOrJobId) => {
     try {
-      const details = await api.getApplication(appId);
-      setSelectedApp(details);
+      if (typeof appIdOrJobId === "string" && appIdOrJobId.startsWith("job-")) {
+        const jId = parseInt(appIdOrJobId.replace("job-", ""));
+        await api.markJobBrowsed(jId).catch(() => {});
+        const j = jobs.find((jobItem) => jobItem.id === jId) || { id: jId, title: "Target Opportunity", company: "Company" };
+        handleTailorJobFromAnywhere(j);
+        return;
+      }
+      try {
+        const details = await api.getApplication(appIdOrJobId);
+        setSelectedApp(details);
+        if (details.job_id) {
+          api.markJobBrowsed(details.job_id).catch(() => {});
+        }
+      } catch (appErr) {
+        // Fallback: check if appIdOrJobId matches an existing application by job_id
+        const existingApp = applications.find((a) => a.job_id === appIdOrJobId && typeof a.id === "number");
+        if (existingApp) {
+          const details = await api.getApplication(existingApp.id);
+          setSelectedApp(details);
+        } else {
+          // If it's a job ID without an application, tailor it on demand
+          const matchedJob = jobs.find((j) => j.id === appIdOrJobId);
+          if (matchedJob) {
+            await handleTailorJobFromAnywhere(matchedJob);
+            return;
+          }
+          throw appErr;
+        }
+      }
+      await loadData();
     } catch (err) {
       console.error("Failed to load application details:", err);
     }
   };
+
+  const handleToggleWishlist = async (opportunity) => {
+    try {
+      const jobId = opportunity.job_id || opportunity.id;
+      const isAppRecord = typeof opportunity.id === "number" && !opportunity.site;
+
+      // Optimistic UI update across applications, jobs, and modal
+      setApplications((prev) =>
+        prev.map((a) => {
+          if (a.id === opportunity.id || (jobId && a.job_id === jobId)) {
+            return { ...a, is_wishlisted: !a.is_wishlisted };
+          }
+          return a;
+        })
+      );
+
+      setJobs((prev) =>
+        prev.map((j) => {
+          if (j.id === jobId) {
+            return { ...j, is_wishlisted: !j.is_wishlisted };
+          }
+          return j;
+        })
+      );
+
+      if (selectedApp && (selectedApp.id === opportunity.id || selectedApp.job_id === jobId)) {
+        setSelectedApp((prev) => (prev ? { ...prev, is_wishlisted: !prev.is_wishlisted } : null));
+      }
+
+      // Backend sync
+      if (isAppRecord) {
+        await api.toggleApplicationWishlist(opportunity.id);
+      } else if (typeof opportunity.id === "string" && opportunity.id.startsWith("job-")) {
+        await api.toggleApplicationWishlist(opportunity.id);
+      } else if (jobId) {
+        await api.toggleJobWishlist(jobId);
+      }
+
+      // Refresh applications to ensure wishlist pipeline reflects latest state
+      const updatedApps = await api.getApplications();
+      setApplications(updatedApps);
+    } catch (err) {
+      console.error("Failed to toggle wishlist:", err);
+    }
+  };
+
 
   const handleTailorJobFromAnywhere = async (job) => {
     try {
@@ -346,9 +418,6 @@ function OpportunityOSApp() {
                   <h1 style={{ fontSize: "30px", fontWeight: "800", color: "var(--text-primary)", margin: "4px 0 8px" }}>
                     Opportunity<span style={{ color: "var(--primary)" }}>OS</span> Dashboard
                   </h1>
-                  <p style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
-                    Upload your master CV with multi-domain projects, discover roles across LinkedIn, Wellfound & Indeed, generate 1-page ATS resumes, and review before applying.
-                  </p>
                 </div>
 
                 <div style={{ display: "flex", gap: "10px" }}>
@@ -375,16 +444,14 @@ function OpportunityOSApp() {
               {/* Stats Overview */}
               <StatsOverview metrics={metrics} />
 
-              {/* 14-Stage Visual Workflow */}
-              <AgentPipeline />
-
-              {/* Split Grid: Top Opportunities & Real-Time Agent Activity Log */}
-              <div className="split-grid">
+              {/* Top Opportunities Ranked by Fit */}
+              <div style={{ marginTop: "24px" }}>
                 <TopOpportunities
                   jobs={applications.length > 0 ? applications : jobs}
-                  maxItems={4}
+                  maxItems={6}
                   onOpenCustomJD={() => setIsCustomJDOpen(true)}
                   onSelectJob={(job) => handleTailorJobFromAnywhere(job)}
+                  onToggleWishlist={handleToggleWishlist}
                   onOpenReview={(job) => {
                     const matchedApp = applications.find((a) => a.job_id === job.id || a.title === job.title);
                     if (matchedApp) {
@@ -393,16 +460,6 @@ function OpportunityOSApp() {
                       handleTailorJobFromAnywhere(job);
                     }
                   }}
-                />
-
-                <AgentActivityLog logs={logs} running={running} />
-              </div>
-
-              {/* Applications Table */}
-              <div style={{ marginTop: "28px" }}>
-                <ApplicationsTable
-                  applications={applications}
-                  onOpenApplication={handleOpenApplication}
                 />
               </div>
             </div>
@@ -429,6 +486,7 @@ function OpportunityOSApp() {
                 loadData();
               }}
               onTailorAndApply={(job) => handleTailorJobFromAnywhere(job)}
+              onToggleWishlist={handleToggleWishlist}
             />
           )}
 
@@ -439,13 +497,11 @@ function OpportunityOSApp() {
                 <h2 style={{ fontSize: "24px", fontWeight: "800", color: "var(--text-primary)" }}>
                   Applications & Review Center
                 </h2>
-                <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                  Review prepared 1-page ATS resumes, inspect project match citations, and authorize browser automation.
-                </p>
               </div>
               <ApplicationsTable
                 applications={applications}
                 onOpenApplication={handleOpenApplication}
+                onToggleWishlist={handleToggleWishlist}
               />
             </div>
           )}
@@ -454,60 +510,6 @@ function OpportunityOSApp() {
           {currentTab === "profile" && (
             <div>
               <ProfileEditor profile={profile} onSaveProfile={handleSaveProfile} />
-            </div>
-          )}
-
-          {/* TAB: INTERVIEW */}
-          {currentTab === "interview" && (
-            <div>
-              <div style={{ marginBottom: "24px" }}>
-                <h2 style={{ fontSize: "24px", fontWeight: "800", color: "var(--text-primary)" }}>
-                  Interview Copilot & Follow-ups
-                </h2>
-                <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                  Detected invitations, automated reminders, and company research briefings.
-                </p>
-              </div>
-
-              {interviewEvents.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                  {interviewEvents.map((evt) => (
-                    <div
-                      key={evt.id}
-                      className="card"
-                      style={{
-                        padding: "20px",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <div>
-                        <span className="badge badge-success" style={{ marginBottom: "6px" }}>
-                          INVITATION VERIFIED
-                        </span>
-                        <h4 style={{ fontSize: "16px", fontWeight: "700", color: "var(--text-primary)" }}>
-                          {evt.company} — {evt.role}
-                        </h4>
-                        <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                          {evt.subject} · {evt.interview_details?.date}
-                        </p>
-                      </div>
-
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => handleOpenInterviewPrep(evt)}
-                      >
-                        [PREPARE INTERVIEW]
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="card" style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
-                  No interview invitations detected yet. The Follow-up agent continuously monitors application portals.
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -521,6 +523,8 @@ function OpportunityOSApp() {
           onApprove={handleApprove}
           onReject={handleReject}
           onProvideMissingInfo={handleProvideMissingInfo}
+          onProfileUpdated={loadData}
+          onToggleWishlist={handleToggleWishlist}
         />
       )}
 

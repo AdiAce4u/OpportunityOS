@@ -22,10 +22,12 @@ import {
   RefreshCw,
   Loader2,
   Copy,
+  BookmarkCheck,
+  Heart,
 } from "lucide-react";
 import { api } from "../services/api";
 
-export function ApplicationReviewModal({ application, onClose, onApprove, onReject, onProvideMissingInfo }) {
+export function ApplicationReviewModal({ application, onClose, onApprove, onReject, onProvideMissingInfo, onProfileUpdated, onToggleWishlist }) {
   if (!application) return null;
 
   const [activeTab, setActiveTab] = useState("resume"); // "resume" | "evidence" | "cover_letter" | "answers" | "research"
@@ -50,6 +52,34 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
   const evidenceTable = application.evidence_table || why.evidence_table || [];
   const resumePdfUrl = `http://localhost:8000/api/applications/${application.id}/resume-pdf`;
   const portalUrl = job.url || (job.external_id ? `http://localhost:8000/portal/apply/${job.external_id}` : "http://localhost:8000/portal/apply/job-001");
+
+  const cleanCompany = (company || "Company").replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  const cleanRole = (role || "Role").replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  const tailoredCvFilename = `CV_${cleanCompany}_${cleanRole}.pdf`;
+
+  const [savingCV, setSavingCV] = useState(false);
+  const [savedCVMsg, setSavedCVMsg] = useState(null);
+
+  const handleSaveCVToProfile = async () => {
+    setSavingCV(true);
+    try {
+      const res = await api.saveTailoredCV(application.profile_id || 1, {
+        company: company,
+        role: role,
+        application_id: application.id,
+        resume_text: isEditing ? editedResume : application.tailored_resume,
+      });
+      setSavedCVMsg(`✓ Saved ${res.filename || tailoredCvFilename}!`);
+      setTimeout(() => setSavedCVMsg(null), 3500);
+      if (onProfileUpdated) {
+        onProfileUpdated();
+      }
+    } catch (err) {
+      alert(`Failed to save tailored CV: ${err.message}`);
+    } finally {
+      setSavingCV(false);
+    }
+  };
 
   const copyToClipboard = (text, type) => {
     if (!text) return;
@@ -154,7 +184,33 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
                 <ExternalLink size={12} /> {job.site || "Application Portal"}
               </span>
             </div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-primary)" }}>{role}</h2>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <button
+                type="button"
+                onClick={() => onToggleWishlist && onToggleWishlist(application)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "4px",
+                  borderRadius: "50%",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "transform 0.15s ease",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.2)")}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                title={application.is_wishlisted ? "Remove from Wishlist" : "Wishlist this opportunity"}
+              >
+                <Heart
+                  size={22}
+                  fill={application.is_wishlisted ? "#f43f5e" : "transparent"}
+                  color={application.is_wishlisted ? "#f43f5e" : "var(--text-muted)"}
+                />
+              </button>
+              <h2 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-primary)" }}>{role}</h2>
+            </div>
             <div style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "2px" }}>
               {company} · {job.location || "Bangalore, India"} · {job.salary_text || "Competitive"}
             </div>
@@ -411,10 +467,32 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
                   </button>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={handleSaveCVToProfile}
+                    disabled={savingCV}
+                    className="btn btn-secondary"
+                    style={{
+                      padding: "6px 14px",
+                      fontSize: "12px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      background: savedCVMsg ? "rgba(16, 185, 129, 0.15)" : undefined,
+                      borderColor: savedCVMsg ? "var(--accent-emerald)" : undefined,
+                      color: savedCVMsg ? "var(--accent-emerald-text)" : undefined,
+                      cursor: "pointer",
+                    }}
+                    title={`Save ${tailoredCvFilename} to your Profile section`}
+                  >
+                    {savedCVMsg ? <CheckCircle2 size={13} color="var(--accent-emerald-text)" /> : <BookmarkCheck size={13} />}
+                    <span>{savedCVMsg ? savedCVMsg : savingCV ? "Saving..." : "Save CV to Profile"}</span>
+                  </button>
+
                   <a
                     href={resumePdfUrl}
-                    download={`Tailored_Resume_${company.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`}
+                    download={tailoredCvFilename}
                     className="btn btn-primary"
                     style={{ padding: "6px 14px", fontSize: "12px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
                   >

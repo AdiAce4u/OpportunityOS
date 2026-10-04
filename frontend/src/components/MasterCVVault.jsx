@@ -143,14 +143,10 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
             >
               Master CV & Domain Vault
             </span>
-            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>• Ground Truth Knowledge Base</span>
           </div>
           <h2 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-primary)" }}>
             {profile?.name || "Candidate"}’s Comprehensive Multi-Domain Portfolio
           </h2>
-          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            Contains all projects across SDE, Data & AI, Core Engineering, Product, and Finance. The agent segregates the best projects for each specific job description.
-          </p>
         </div>
 
         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>

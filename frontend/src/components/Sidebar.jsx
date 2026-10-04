@@ -33,14 +33,7 @@ export function Sidebar({ currentTab, setTab, awaitingCount, interviewCount, pro
       badge: awaitingCount > 0 ? awaitingCount : null,
       badgeColor: "#f59e0b",
     },
-    { id: "profile", label: "Profile & Ground Truth", icon: <User size={18} /> },
-    {
-      id: "interview",
-      label: "Interview Copilot",
-      icon: <GraduationCap size={18} />,
-      badge: interviewCount > 0 ? interviewCount : null,
-      badgeColor: "#10b981",
-    },
+    { id: "profile", label: "Profile", icon: <User size={18} /> },
   ];
 
   return (

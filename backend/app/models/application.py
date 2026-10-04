@@ -45,5 +45,10 @@ class Application(Base):
     interview_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     notes: Mapped[str] = mapped_column(Text, default="")
     
+    # Candidate interaction & wishlist state
+    is_wishlisted: Mapped[bool] = mapped_column(Boolean, default=False)
+    recently_browsed: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_browsed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -1,7 +1,7 @@
 import React from "react";
-import { MapPin, DollarSign, Check, AlertCircle, ArrowUpRight, Award } from "lucide-react";
+import { MapPin, DollarSign, Check, AlertCircle, ArrowUpRight, Award, Heart } from "lucide-react";
 
-export function TopOpportunities({ jobs = [], onSelectJob, onOpenReview, onOpenCustomJD, maxItems }) {
+export function TopOpportunities({ jobs = [], onSelectJob, onOpenReview, onOpenCustomJD, onToggleWishlist, maxItems }) {
   const displayJobs = maxItems ? jobs.slice(0, maxItems) : jobs;
 
   return (
@@ -115,7 +115,35 @@ export function TopOpportunities({ jobs = [], onSelectJob, onOpenReview, onOpenC
                   </div>
                 </div>
 
-                <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onToggleWishlist) onToggleWishlist(job);
+                    }}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "6px",
+                      borderRadius: "50%",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "transform 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.2)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                    title={job.is_wishlisted ? "Remove from Wishlist" : "Wishlist this opportunity"}
+                  >
+                    <Heart
+                      size={18}
+                      fill={job.is_wishlisted ? "#f43f5e" : "transparent"}
+                      color={job.is_wishlisted ? "#f43f5e" : "var(--text-muted)"}
+                    />
+                  </button>
+
                   <button
                     className="btn btn-secondary"
                     style={{ fontSize: "12px", padding: "8px 12px" }}
