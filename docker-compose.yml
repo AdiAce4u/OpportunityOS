@@ -1,0 +1,12 @@
+services:
+  backend:
+    build: ./backend
+    ports: ["8000:8000"]
+    environment:
+      DATABASE_URL: sqlite:///./opportunityos.db
+      LLM_PROVIDER: mock
+      ALLOW_BROWSER_SUBMIT: "false"
+  frontend:
+    build: ./frontend
+    ports: ["5173:5173"]
+    depends_on: [backend]
