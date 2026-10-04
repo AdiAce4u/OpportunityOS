@@ -321,17 +321,7 @@ CANDIDATE MASTER CV (RAW TEXT):
                     domain_items.append(it)
 
         if not domain_items:
-            domain_label = {
-                "core": "Core (Robotics/Mechanical/Embedded)",
-                "sde": "Software Development (SDE/Backend/Fullstack)",
-                "data": "Data Science / Machine Learning / AI",
-                "finance": "Quantitative Finance / Trading",
-                "consult": "Consulting / Strategy / Product"
-            }.get(target_domain, target_domain.upper())
-            raise ValueError(
-                f"No projects found matching the {domain_label} domain in your Master CV. "
-                f"Please add relevant projects for {job.get('title', 'this role')} before applying."
-            )
+            domain_items = all_items
 
         scored_comps = [(score_item(it), it) for it in all_competitions]
         scored_comps.sort(key=lambda x: x[0], reverse=True)
@@ -367,6 +357,7 @@ CANDIDATE MASTER CV (RAW TEXT):
         total_used = len(selected_comps) + len(selected_internships)
         needed_projects = max(1, 5 - total_used)
         selected_projects = [prepare_item(it[1]) for it in domain_projs[:needed_projects]]
+        all_available_projects = [prepare_item(it[1]) for it in scored_projects]
 
         return {
             "target_domain": target_domain,
@@ -374,5 +365,6 @@ CANDIDATE MASTER CV (RAW TEXT):
             "has_separate_internships": has_separate_internships,
             "selected_internships": selected_internships,
             "selected_projects": selected_projects,
+            "all_available_projects": all_available_projects,
             "rationale": f"Selected top domain-aligned experience in priority COMPS > INTERN > PROJECT."
         }

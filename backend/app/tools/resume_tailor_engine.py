@@ -215,62 +215,117 @@ class ResumeTailorEngine:
                 doc_lines.append(f"{r[0]} | {r[1]} | {r[2]} | {r[3]}")
             doc_lines.append("")
 
-        def append_item_lines(item):
+        def append_item_lines(item, target_list):
             date_str = item.get("dates") or ""
-            doc_lines.append(f"{item.get('name')}  {date_str}".strip())
+            target_list.append(f"{item.get('name')}  {date_str}".strip())
             if item.get("description"):
                 desc_clean = item.get("description").strip()
                 if desc_clean:
-                    doc_lines.append(desc_clean)
+                    target_list.append(desc_clean)
             for b in item.get("bullets", []):
                 clean_b = b.lstrip('•-* ').strip()
                 if clean_b:
-                    doc_lines.append(f"• {clean_b}")
-            doc_lines.append("")
+                    target_list.append(f"• {clean_b}")
+            target_list.append("")
 
-        # 3. Dynamic Experience Section (The ONLY modified section)
-        # 3A. Competitions & Conferences Section (Top Priority if present)
-        if selected_competitions:
-            doc_lines.append("COMPETITIONS/CONFERENCES")
-            for comp in selected_competitions:
-                append_item_lines(comp)
+        def assemble_doc(projects_list):
+            doc = []
+            doc.extend(header_lines)
+            if edu_rows:
+                doc.append("")
+                doc.append("EDUCATION")
+                for r in edu_rows:
+                    doc.append(f"{r[0]} | {r[1]} | {r[2]} | {r[3]}")
+                doc.append("")
 
-        # 3B. Internships and Projects Section (Determined by internship count)
+            # 3A. Competitions & Conferences Section (Top Priority if present)
+            if selected_competitions:
+                doc.append("COMPETITIONS/CONFERENCES")
+                for comp in selected_competitions:
+                    append_item_lines(comp, doc)
+
+            # 3B. Internships and Projects Section (Determined by internship count)
+            if len(selected_internships) >= 2 or (has_separate_internships and selected_internships):
+                doc.append("INTERNSHIPS")
+                for int_item in selected_internships[:2]:
+                    append_item_lines(int_item, doc)
+
+                doc.append("PROJECTS")
+                for p in projects_list:
+                    append_item_lines(p, doc)
+            elif len(selected_internships) == 1:
+                doc.append("INTERNSHIPS AND PROJECTS")
+                for int_item in selected_internships[:1]:
+                    append_item_lines(int_item, doc)
+
+                for p in projects_list:
+                    append_item_lines(p, doc)
+            else:
+                doc.append("PROJECTS")
+                for p in projects_list:
+                    append_item_lines(p, doc)
+
+            # 4. 100% Full Preservation of ALL Other Static Sections in Master CV Order
+            for sec in sections_order:
+                if sec in ["HEADER", "EDUCATION"] or sec in proj_section_names:
+                    continue
+
+                formatted_sec_lines = MasterCVParser.format_static_section_lines(sections_map[sec], sec, target_domain)
+                if formatted_sec_lines:
+                    doc.extend(["", sec])
+                    doc.extend(formatted_sec_lines)
+
+            return "\n".join(doc)
+
+        # Baseline projects limit
         if len(selected_internships) >= 2 or (has_separate_internships and selected_internships):
-            doc_lines.append("INTERNSHIPS")
-            for int_item in selected_internships[:2]:
-                append_item_lines(int_item)
-
-            doc_lines.append("PROJECTS")
-            proj_limit = max(1, 4 - (len(selected_competitions) + len(selected_internships[:2])))
-            for p in selected_projects[:proj_limit]:
-                append_item_lines(p)
+            base_limit = max(1, 4 - (len(selected_competitions) + len(selected_internships[:2])))
         elif len(selected_internships) == 1:
-            doc_lines.append("INTERNSHIPS AND PROJECTS")
-            for int_item in selected_internships[:1]:
-                append_item_lines(int_item)
-
-            proj_limit = max(1, 4 - (len(selected_competitions) + 1))
-            for p in selected_projects[:proj_limit]:
-                append_item_lines(p)
+            base_limit = max(1, 4 - (len(selected_competitions) + 1))
         else:
-            doc_lines.append("PROJECTS")
-            proj_limit = max(2, 4 - len(selected_competitions))
-            for p in selected_projects[:proj_limit]:
-                append_item_lines(p)
+            base_limit = max(2, 4 - len(selected_competitions))
 
-        # 4. 100% Full Preservation of ALL Other Static Sections in Master CV Order
-        # (AWARDS AND ACHIEVEMENTS, POSITIONS OF RESPONSIBILITY, SKILLS, COURSEWORK, CERTIFICATIONS, EXTRA CURRICULAR, etc.)
-        for sec in sections_order:
-            if sec in ["HEADER", "EDUCATION"] or sec in proj_section_names:
-                continue
+        current_projects = list(selected_projects[:base_limit])
 
-            formatted_sec_lines = MasterCVParser.format_static_section_lines(sections_map[sec], sec, target_domain)
-            if formatted_sec_lines:
-                doc_lines.extend(["", sec])
-                doc_lines.extend(formatted_sec_lines)
+        # Available extra projects pool (from all_available_projects or Master CV projects)
+        all_pool = llm_result.get("all_available_projects") or selected_projects
+        used_names = {p.get("name") for p in current_projects}
+        available_extra = [p for p in all_pool if p.get("name") not in used_names]
 
-        return "\n".join(doc_lines)
+        # Dynamic Page-Filling Engine:
+        # Incase there are spaces left in a page of tailored resume, add more projects to make it look filled
+        for extra_p in available_extra:
+            test_doc = assemble_doc(current_projects + [extra_p])
+            if ResumeTailorEngine.check_fits_single_page(test_doc):
+                current_projects.append(extra_p)
+                logger.info(f"[PageFiller] Added extra project '{extra_p.get('name')}' to fill empty page space.")
+            else:
+                # Stop if adding another project causes page 2 overflow
+                break
+
+        return assemble_doc(current_projects)
+
+    @staticmethod
+    def check_fits_single_page(tailored_text: str) -> bool:
+        """
+        Fast in-memory/temp layout check: returns True if tailored_text builds into strictly 1 page on A4.
+        """
+        import tempfile
+        tmp_fd, tmp_path = tempfile.mkstemp(suffix=".pdf")
+        os.close(tmp_fd)
+        try:
+            ResumeTailorEngine.generate_pdf(tailored_text, tmp_path)
+            from pypdf import PdfReader
+            reader = PdfReader(tmp_path)
+            return len(reader.pages) == 1
+        except Exception:
+            return False
+        finally:
+            if os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except OSError:
+                    pass
 
     @staticmethod
     def generate_pdf(tailored_text: str, output_path: str) -> str:
