@@ -120,6 +120,7 @@ def search_job_portals(request: PortalSearchRequest, db: Session = Depends(get_d
             existing = db.query(Job).filter(Job.title == item.get("title"), Job.company == item.get("company")).first()
 
         if existing:
+            existing.url = item.get("job_url") or existing.url
             existing.match_score = item.get("match_score", existing.match_score)
             existing.best_matching_project = item.get("best_matching_project", existing.best_matching_project)
             existing.best_project_domain = item.get("best_project_domain", existing.best_project_domain)
