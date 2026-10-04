@@ -46,29 +46,18 @@ Your job is to analyze a candidate's complete Master CV (which may contain 40-50
    - **Projects**:
      * Select domain-relevant projects in `"selected_projects"`. Total items across Comps + Interns + Projects must be 4-5.
 
-3. **SINGLE-LINE ATS BULLET CONSTRAINT**:
-   - Every bullet point must be formatted as a high-impact, single-line action statement (max 100-115 characters / 14-17 words) that fits cleanly on a single line on an A4 page without wrapping.
-   - Begin with a strong action verb (e.g., Engineered, Architected, Developed, Optimized, Built, Implemented).
-   - Retain 100% of the verified facts, metrics, and technologies.
+3. **EXACT VERBATIM TEXT STYLE RETENTION (CRITICAL)**:
+   - Do NOT rewrite, condense, truncate, or paraphrase bullet points or descriptions!
+   - Keep the candidate's exact wording, phrasing, punctuation, and style from the Master CV.
+   - Do NOT convert non-bulleted text into bullets, and do NOT remove existing bullets.
+   - If an item has a description, keep it in full. If it has bullets, keep all bullets in full.
 
 4. **CLEAN TITLES & NO TECH LINE**:
    - Do NOT emit any `Tech: ...` subtitle lines.
    - Include date range on the header (e.g., `[Nov 2025 - Mar 2026]`).
 
-5. **DOMAIN-TAILORED SKILLS & COURSEWORK FILTERING**:
-   Select ONLY the most relevant skill categories (top 4-5 lines) and coursework categories (top 2-3 lines) matching the target job track from the Master CV:
-   - **For Non-Core Tracks (SDE, Data, Finance, Consult)**:
-     - `SKILLS AND EXPERTISE`: EXCLUDE all CAD, Mechanical, Workshop, and Controls categories (e.g. `Controls, Robotics & Embedded`, `CAD & Engineering Software`, `Hands-on Workshop Skills`). Include only domain-relevant categories.
-     - `COURSEWORK INFORMATION`: EXCLUDE `Core Courses/Labs`. Include relevant categories like `Computer Science & ML`, `Mathematics`, and `MOOCs`.
-     - `CERTIFICATIONS`: Pick top 1-2 most domain-aligned certifications with concise single-line bullets.
-   - **For Core Tracks (Robotics, Mechanical, Embedded, Mechatronics, Control)**:
-     - `SKILLS AND EXPERTISE`: EXCLUDE pure non-core items (e.g. `Generative AI & NLP`, `Data Analysis & Visualization`, pure web stacks). Include `Programming Languages`, `Controls, Robotics & Embedded`, `CAD & Engineering Software`, `Backend & System Design`, `Hands-on Workshop Skills`, `Tools & Deployment`.
-     - `COURSEWORK INFORMATION`: Include `Core Courses/Labs`, `Mathematics`, `Computer Science & ML`.
-     - `CERTIFICATIONS`: Pick top 1-2 core/engineering certifications with concise single-line bullets.
-
-6. **EXTRA CURRICULAR ACTIVITIES & REMAINING SECTIONS**:
-   - Include ONLY **5 top extra-curricular bullet points** from the Master CV.
-   - All other sections in Master CV (Awards, Positions of Responsibility, etc.) are preserved verbatim.
+5. **STATIC SECTIONS PRESERVATION**:
+   - Skills, Coursework, Certifications, Positions of Responsibility, and Extra Curriculars are preserved verbatim from the Master CV in their exact text style. Do not invent or replace categories.
 
 7. **DOMAIN VALIDATION GUARDRAIL**:
    - If candidate Master CV contains **0** projects/internships matching the target job domain, return:
@@ -354,12 +343,11 @@ CANDIDATE MASTER CV (RAW TEXT):
         scored_projects.sort(key=lambda x: x[0], reverse=True)
 
         def prepare_item(it_dict):
-            bullets = [condense_bullet(b) for b in it_dict.get("bullets", [])]
             return {
                 "name": it_dict.get("name", ""),
                 "dates": it_dict.get("dates", ""),
-                "description": "",
-                "bullets": bullets
+                "description": it_dict.get("description", ""),
+                "bullets": list(it_dict.get("bullets", []))
             }
 
         # Filter domain competitions, internships, and projects

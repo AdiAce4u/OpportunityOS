@@ -102,7 +102,12 @@ class ResumeTailorEngine:
                     continue
 
             # 2. Single-line regex match
-            m = re.match(r'^(\d{4})\s+(.+?)\s+(IIT\s+[A-Za-z]+|[A-Za-z\s\.\'\-]+?(?:School|College|Institute|University|Vidyalaya|Academy|Council|Board))\s+([0-9\.]+\s*(?:\/\s*10|%|\/\s*100)?)', l, re.I)
+            m = re.match(
+                r'^(\d{4})\s+(B\.?Tech(?:\.[^\s]+)?|AISSCE(?:\s*\([^\)]+\))?|AISSE(?:\s*\([^\)]+\))?|C\.?B\.?S\.?E\.?|Class\s+[X|V|I]+|[A-Za-z\.\s\(\)]+?)\s+((?:IIT|[A-Z][A-Za-z\.\'\-]+)(?:.*?(?:School|College|Institute|University|Vidyalaya|Academy|Council|Board|Convent|IIT)[A-Za-z\s\.\'\-]*?))\s+([0-9\.]+\s*(?:\/\s*10|%|\/\s*100)?)$',
+                l, re.I
+            )
+            if not m:
+                m = re.match(r'^(\d{4})\s+(.+?)\s+(IIT\s+[A-Za-z]+|[A-Za-z\s\.\'\-]+?(?:School|College|Institute|University|Vidyalaya|Academy|Council|Board|Convent)[A-Za-z\s\.\'\-]*)\s+([0-9\.]+\s*(?:\/\s*10|%|\/\s*100)?)', l, re.I)
             if m:
                 rows.append([m.group(1).strip(), m.group(2).strip(), m.group(3).strip(), m.group(4).strip()])
                 i += 1
@@ -210,90 +215,54 @@ class ResumeTailorEngine:
                 doc_lines.append(f"{r[0]} | {r[1]} | {r[2]} | {r[3]}")
             doc_lines.append("")
 
+        def append_item_lines(item):
+            date_str = item.get("dates") or ""
+            doc_lines.append(f"{item.get('name')}  {date_str}".strip())
+            if item.get("description"):
+                desc_clean = item.get("description").strip()
+                if desc_clean:
+                    doc_lines.append(desc_clean)
+            for b in item.get("bullets", []):
+                clean_b = b.lstrip('•-* ').strip()
+                if clean_b:
+                    doc_lines.append(f"• {clean_b}")
+            doc_lines.append("")
+
         # 3. Dynamic Experience Section (The ONLY modified section)
         # 3A. Competitions & Conferences Section (Top Priority if present)
         if selected_competitions:
             doc_lines.append("COMPETITIONS/CONFERENCES")
             for comp in selected_competitions:
-                date_str = comp.get("dates") or ""
-                doc_lines.append(f"{comp.get('name')}  {date_str}".strip())
-                if comp.get("description"):
-                    doc_lines.append(f"{comp.get('description')}")
-                for b in comp.get("bullets", []):
-                    doc_lines.append(f"• {b}")
-                doc_lines.append("")
+                append_item_lines(comp)
 
         # 3B. Internships and Projects Section (Determined by internship count)
         if len(selected_internships) >= 2 or (has_separate_internships and selected_internships):
             doc_lines.append("INTERNSHIPS")
             for int_item in selected_internships[:2]:
-                date_str = int_item.get("dates") or ""
-                doc_lines.append(f"{int_item.get('name')}  {date_str}".strip())
-                if int_item.get("description"):
-                    doc_lines.append(f"{int_item.get('description')}")
-                for b in int_item.get("bullets", []):
-                    doc_lines.append(f"• {b}")
-                doc_lines.append("")
+                append_item_lines(int_item)
 
             doc_lines.append("PROJECTS")
             proj_limit = max(1, 4 - (len(selected_competitions) + len(selected_internships[:2])))
             for p in selected_projects[:proj_limit]:
-                date_str = p.get("dates") or ""
-                doc_lines.append(f"{p.get('name')}  {date_str}".strip())
-                if p.get("description"):
-                    doc_lines.append(f"{p.get('description')}")
-                for b in p.get("bullets", []):
-                    doc_lines.append(f"• {b}")
-                doc_lines.append("")
+                append_item_lines(p)
         elif len(selected_internships) == 1:
             doc_lines.append("INTERNSHIPS AND PROJECTS")
             for int_item in selected_internships[:1]:
-                date_str = int_item.get("dates") or ""
-                doc_lines.append(f"{int_item.get('name')}  {date_str}".strip())
-                if int_item.get("description"):
-                    doc_lines.append(f"{int_item.get('description')}")
-                for b in int_item.get("bullets", []):
-                    doc_lines.append(f"• {b}")
-                doc_lines.append("")
+                append_item_lines(int_item)
 
             proj_limit = max(1, 4 - (len(selected_competitions) + 1))
             for p in selected_projects[:proj_limit]:
-                date_str = p.get("dates") or ""
-                doc_lines.append(f"{p.get('name')}  {date_str}".strip())
-                if p.get("description"):
-                    doc_lines.append(f"{p.get('description')}")
-                for b in p.get("bullets", []):
-                    doc_lines.append(f"• {b}")
-                doc_lines.append("")
+                append_item_lines(p)
         else:
             doc_lines.append("PROJECTS")
             proj_limit = max(2, 4 - len(selected_competitions))
             for p in selected_projects[:proj_limit]:
-                date_str = p.get("dates") or ""
-                doc_lines.append(f"{p.get('name')}  {date_str}".strip())
-                if p.get("description"):
-                    doc_lines.append(f"{p.get('description')}")
-                for b in p.get("bullets", []):
-                    doc_lines.append(f"• {b}")
-                doc_lines.append("")
+                append_item_lines(p)
 
         # 4. 100% Full Preservation of ALL Other Static Sections in Master CV Order
         # (AWARDS AND ACHIEVEMENTS, POSITIONS OF RESPONSIBILITY, SKILLS, COURSEWORK, CERTIFICATIONS, EXTRA CURRICULAR, etc.)
         for sec in sections_order:
             if sec in ["HEADER", "EDUCATION"] or sec in proj_section_names:
-                continue
-            
-            # Check if LLM provided tailored replacements for Skills or Coursework
-            if "SKILLS" in sec.upper() and llm_result.get("selected_skills"):
-                doc_lines.extend(["", sec])
-                for sk in llm_result.get("selected_skills"):
-                    doc_lines.append(sk)
-                continue
-
-            if "COURSEWORK" in sec.upper() and llm_result.get("selected_coursework"):
-                doc_lines.extend(["", sec])
-                for cw in llm_result.get("selected_coursework"):
-                    doc_lines.append(cw)
                 continue
 
             formatted_sec_lines = MasterCVParser.format_static_section_lines(sections_map[sec], sec, target_domain)
@@ -341,7 +310,7 @@ class ResumeTailorEngine:
             sec_banner_style = ParagraphStyle("CDCBanner", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=base_fs, leading=base_fs + 1.2, alignment=1, textColor=colors.black, leftIndent=0, rightIndent=0, firstLineIndent=0)
             item_title_left = ParagraphStyle("CDCItemLeft", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=base_fs, leading=base_fs + 1.2, textColor=colors.black, leftIndent=0, rightIndent=0, firstLineIndent=0)
             item_title_right = ParagraphStyle("CDCItemRight", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=base_fs, leading=base_fs + 1.2, alignment=2, textColor=colors.black, leftIndent=0, rightIndent=0, firstLineIndent=0)
-            summary_style = ParagraphStyle("CDCSummary", parent=styles["Normal"], fontName="Helvetica-Oblique", fontSize=base_fs - 0.4, leading=base_fs + 1.0, textColor=colors.HexColor("#1E293B"), leftIndent=0, rightIndent=0, firstLineIndent=0)
+            body_style = ParagraphStyle("CDCBody", parent=styles["Normal"], fontName="Helvetica", fontSize=base_fs - 0.2, leading=base_fs + 1.0, textColor=colors.black, leftIndent=0, rightIndent=0, firstLineIndent=0)
             bullet_style = ParagraphStyle("CDCBullet", parent=styles["Normal"], fontName="Helvetica", fontSize=base_fs - 0.2, leading=base_fs + 1.0, textColor=colors.black, leftIndent=0, rightIndent=0, firstLineIndent=0)
             cat_style = ParagraphStyle("CDCCategory", parent=styles["Normal"], fontName="Helvetica", fontSize=base_fs - 0.2, leading=base_fs + 1.1, textColor=colors.black, leftIndent=0, rightIndent=0, firstLineIndent=0)
 
@@ -360,16 +329,27 @@ class ResumeTailorEngine:
 
             story = []
 
-            # 1. Header (Name | Roll and Degree)
-            name_line = lines[0].replace("#", "").strip()
-            degree_line = lines[1].replace("#", "").strip() if len(lines) > 1 and not lines[1].isupper() else ""
-            
-            story.append(Paragraph(f"<b>{name_line}</b>", title_style))
-            if degree_line:
-                story.append(Paragraph(degree_line, sub_style))
-            story.append(Spacer(1, 1.0))
+            # 1. Header (Name | Roll and Degree/Minors)
+            header_lines = []
+            i = 0
+            while i < len(lines):
+                hl = lines[i]
+                is_banner = (
+                    hl.startswith("## ") or hl.startswith("# ") or
+                    (hl.isupper() and len(hl) < 45 and not hl.startswith(("•", "-", "*")) and "|" not in hl)
+                )
+                if is_banner:
+                    break
+                header_lines.append(hl.replace("#", "").strip())
+                i += 1
 
-            i = 2 if degree_line else 1
+            if header_lines:
+                story.append(Paragraph(f"<b>{header_lines[0]}</b>", title_style))
+                for sub_line in header_lines[1:]:
+                    if sub_line:
+                        story.append(Paragraph(sub_line, sub_style))
+                story.append(Spacer(1, 1.0))
+
             current_section = ""
             first_section = True
 
@@ -436,9 +416,42 @@ class ResumeTailorEngine:
 
                     continue
 
-                # Item Title with Date on Right
+                # 2. In SKILLS or COURSEWORK: Copy exact formatting from Master CV:
+                # Category label prefix before colon is BOLD (<b>Category:</b>), content after colon is REGULAR (Helvetica)
+                if "SKILL" in current_section or "COURSEWORK" in current_section:
+                    clean_line = line.lstrip('•-* \t').strip()
+                    if not clean_line:
+                        i += 1
+                        continue
+
+                    # Safely escape ampersands without breaking existing XML entities
+                    clean_line = re.sub(r'&(?!(?:amp|lt|gt|quot|apos);)', '&amp;', clean_line)
+
+                    # Look for category header prefix ending in colon
+                    colon_pos = clean_line.find(':')
+                    if colon_pos != -1 and colon_pos < 55 and '|' not in clean_line[:colon_pos]:
+                        raw_lbl = clean_line[:colon_pos + 1].strip()
+                        raw_val = clean_line[colon_pos + 1:].strip()
+
+                        # Strip any existing <b> or ** from label so we don't produce invalid or nested tags
+                        lbl_clean = re.sub(r'<\/?b>|\*\*', '', raw_lbl).strip()
+                        # Val should preserve any deliberate markdown bold if present, but standard skills remain regular
+                        val_formatted = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', raw_val)
+
+                        formatted_p = f"<b>{lbl_clean}</b> {val_formatted}".strip()
+                    else:
+                        formatted_p = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', clean_line)
+
+                    story.append(Paragraph(formatted_p, cat_style))
+                    i += 1
+                    continue
+
+                # 3. Item Title with Date on Right (Only in Experience/Projects/Internships/Competitions/POR)
                 date_match = re.search(r'\[([A-Za-z0-9\s\-\–\—\.]+)\]', line)
-                is_item_title = (not line.startswith(('•', '-', '*')) and (date_match or "|" in line or line.startswith("### ")))
+                is_item_title = (
+                    not line.startswith(('•', '-', '*')) and
+                    (date_match or (any(k in current_section for k in ["PROJECT", "INTERN", "COMPETITION", "EXPERIENCE", "POSITION", "LEADERSHIP"]) and "|" in line) or line.startswith("### "))
+                )
 
                 if is_item_title:
                     clean_title = line.lstrip("#* ").strip()
@@ -469,22 +482,18 @@ class ResumeTailorEngine:
 
                 # Bullets - Flush with left margin (0 leftIndent)
                 if line.startswith(('•', '-', '*')):
-                    clean_bullet = line.lstrip('•-* ').strip().replace('&', '&amp;')
+                    clean_bullet = line.lstrip('•-* ').strip()
+                    clean_bullet = re.sub(r'&(?!(?:amp|lt|gt|quot|apos);)', '&amp;', clean_bullet)
+                    clean_bullet = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', clean_bullet)
                     story.append(Paragraph(f"• {clean_bullet}", bullet_style))
                     i += 1
                     continue
 
-                # Category Prefix Lines in Skills / Coursework (Only label is bold, content is regular)
-                colon_idx = line.find(":")
-                if colon_idx != -1 and not line.startswith(('•', '-', '*')) and colon_idx < 45:
-                    lbl = line[:colon_idx+1]
-                    val = line[colon_idx+1:].strip()
-                    story.append(Paragraph(f"<b>{lbl}</b> {val}", cat_style))
-                    i += 1
-                    continue
-
-                if len(line) > 15:
-                    story.append(Paragraph(line, summary_style))
+                if line.strip():
+                    clean_text = line.strip()
+                    clean_text = re.sub(r'&(?!(?:amp|lt|gt|quot|apos);)', '&amp;', clean_text)
+                    clean_text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', clean_text)
+                    story.append(Paragraph(clean_text, body_style))
                 i += 1
 
             doc.build(story)

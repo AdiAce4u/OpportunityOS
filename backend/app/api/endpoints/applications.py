@@ -382,11 +382,11 @@ def download_resume_pdf(application_id: int, db: Session = Depends(get_db)):
     pdf_path = row.tailored_resume_pdf_path
     
     if not pdf_path or not os.path.exists(pdf_path):
-        from app.tools.resume_tools import generate_resume_pdf
+        from app.tools.resume_tailor_engine import ResumeTailorEngine
         pdf_filename = f"Tailored_Resume_App_{row.id}.pdf"
         pdf_path = os.path.join("uploads", pdf_filename)
         resume_content = row.tailored_resume or "Candidate Tailored Resume"
-        generate_resume_pdf(resume_content, pdf_path)
+        ResumeTailorEngine.generate_pdf(resume_content, pdf_path)
         row.tailored_resume_pdf_path = pdf_path
         db.commit()
         

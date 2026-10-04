@@ -2,7 +2,7 @@ import os
 from typing import Any
 from app.agents.state import JobState
 from app.agents.supervisor import log_event
-from app.tools.resume_tools import tailor_resume as tool_tailor, generate_resume_pdf
+from app.tools.resume_tailor_engine import ResumeTailorEngine
 
 def tailor_resume(state: JobState) -> JobState:
     """
@@ -18,14 +18,14 @@ def tailor_resume(state: JobState) -> JobState:
         return state
         
     profile = state["user_profile"]
-    tailored_text = tool_tailor(selected, profile, state.get("original_resume", ""))
+    tailored_text = ResumeTailorEngine.tailor_cv(selected, profile)
     state["tailored_resume"] = tailored_text
     
     # Generate PDF
     pdf_filename = f"Tailored_Resume_{profile.get('name', 'Candidate').replace(' ', '_')}_{selected.get('company', 'Company').replace(' ', '_')}.pdf"
     pdf_path = os.path.join("uploads", pdf_filename)
     try:
-        generate_resume_pdf(tailored_text, pdf_path)
+        ResumeTailorEngine.generate_pdf(tailored_text, pdf_path)
         state["tailored_resume_pdf_path"] = pdf_path
     except Exception:
         state["tailored_resume_pdf_path"] = ""

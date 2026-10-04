@@ -101,8 +101,11 @@ class MasterCVParser:
         without relying on any hardcoded company or project names. Works across single and multi-page master CVs.
         """
         norm_text = re.sub(r'\r\n', '\n', content)
-        # Normalize private use unicode bullets and bullet glyphs
-        norm_text = re.sub(r'[\uf0b7\ufffd\x00\u2022\u2023\u25E6\u2043\u2219\u25CF\u25CB\u25A0\u25A1\·\◦\▪\⁃\∙]', '•', norm_text)
+        norm_text = norm_text.replace('\xa0', ' ')
+        # Normalize private use unicode bullets and bullet glyphs at start of line
+        norm_text = re.sub(r'(?m)^[\s]*[\uf0b7\u2022\u2023\u25E6\u2043\u2219\u25CF\u25CB\u25A0\u25A1\·\◦\▪\⁃\∙\ufffd\x00]\s*', '• ', norm_text)
+        norm_text = norm_text.replace('\ufffd', ' ').replace('\x00', '')
+        norm_text = re.sub(r'[ \t]+', ' ', norm_text)
         # Remove page markers
         norm_text = re.sub(r'(?m)^---\s*PAGE\s*\d+\s*---$', '', norm_text)
 
@@ -162,7 +165,9 @@ class MasterCVParser:
                 return True
             if clean.startswith(('(', ')', '>', '<', '=', '%', '$', '•', '-', '*', '+', '&', ';', ':', ',', '.')):
                 return True
-            if len(clean.split()) == 1 and not any(k in clean.lower() for k in ["project", "intern", "challenge", "kaggle", "meesho", "overnite"]):
+            if re.match(r'^\d', clean) and not re.match(r'^\d{4}\b', clean):
+                return True
+            if len(clean.split()) <= 2 and not any(k in clean.lower() for k in ["project", "intern", "challenge", "kaggle"]):
                 return True
             return False
 
@@ -185,7 +190,7 @@ class MasterCVParser:
             if '|' in line:
                 parts = line.split('|')
                 first_part = parts[0].strip()
-                if 3 <= len(first_part) <= 90 and not first_part[0].islower():
+                if 3 <= len(first_part) <= 90 and not first_part[0].islower() and not re.match(r'^\d', first_part):
                     return True
 
             # Markdown header
@@ -196,19 +201,13 @@ class MasterCVParser:
             if re.search(r'\[[A-Za-z0-9\s\-\–\—\.\,\'\:]+\]|\([A-Za-z0-9\s\-\–\—\.\,\'\:]{4,30}\)$', line) and len(line) < 120 and not line[0].islower():
                 return True
 
-            # Followed by date line, meta line, or bullet point
+            # Followed by date line or supervisor line
             if idx + 1 < len(lines_list):
                 next_line = lines_list[idx + 1].strip()
                 if is_date_only_line(next_line):
                     return True
-                if next_line.lower().startswith(('under the guidance', 'supervisor:', 'supervisors:', 'objective:', 'aim:', 'research topic:', 'under professor')):
+                if next_line.lower().startswith(('under the guidance', 'supervisor:', 'supervisors:', 'research topic:', 'under professor')):
                     return True
-                if next_line.startswith(('•', '-', '*', '+')) or bool(re.match(r'^\d+[\.\)]\s+', next_line)):
-                    if len(line) < 140 and not line[0].islower():
-                        return True
-                if next_line.lower().startswith(('tech:', 'technologies:', 'tools:')):
-                    if len(line) < 140 and not line[0].islower():
-                        return True
 
             return False
 
@@ -317,9 +316,6 @@ class MasterCVParser:
         for it in items:
             if not it.get('name'):
                 continue
-            if not it['bullets'] and it.get('description'):
-                it['bullets'] = [it['description']]
-                it['description'] = ''
             if not it['bullets'] and not it.get('description'):
                 continue
             full_text = f"{it['name']} {it.get('dates', '')}\n{it.get('description', '')}\n" + "\n".join(it.get('bullets', []))
@@ -341,7 +337,10 @@ class MasterCVParser:
         - Set of project-related section names (INTERNSHIPS, PROJECTS, COMPETITIONS, etc.)
         """
         norm_text = re.sub(r'\r\n', '\n', content)
-        norm_text = re.sub(r'[\uf0b7\ufffd\x00\u2022\u2023\u25E6\u2043\u2219\u25CF\u25CB\u25A0\u25A1\·\◦\▪\⁃\∙]', '•', norm_text)
+        norm_text = norm_text.replace('\xa0', ' ')
+        norm_text = re.sub(r'(?m)^[\s]*[\uf0b7\u2022\u2023\u25E6\u2043\u2219\u25CF\u25CB\u25A0\u25A1\·\◦\▪\⁃\∙\ufffd\x00]\s*', '• ', norm_text)
+        norm_text = norm_text.replace('\ufffd', ' ').replace('\x00', '')
+        norm_text = re.sub(r'[ \t]+', ' ', norm_text)
         norm_text = re.sub(r'(?m)^---\s*PAGE\s*\d+\s*---$', '', norm_text)
 
         proj_section_names = {
@@ -383,122 +382,75 @@ class MasterCVParser:
     @staticmethod
     def format_static_section_lines(lines: List[str], sec_name: str, domain: str = "sde") -> List[str]:
         """
-        Formats and normalizes any arbitrary static section lines:
-        - For SKILLS and COURSEWORK: merges wrapped lines into single Category: values,
-          filters for domain relevance (core vs non-core).
-        - For AWARDS, POSITIONS OF RESPONSIBILITY, CERTIFICATIONS, EXTRA CURRICULARS:
-          preserves all content as-is with clean bullet formatting.
+        Preserves 100% of the candidate's master CV static section lines in their exact text style:
+        - Never changes font style or forces bulleting on non-bulleted lines.
+        - If a line is bulleted in the master CV, keeps the bullet.
+        - If a line is plain text in the master CV, keeps it plain text.
+        - Merges category lines for SKILLS / COURSEWORK if wrapped, without removing any user categories.
+        - Strips out CDC footer noise (e.g. '!Self declared by the student...').
         """
-        is_core = (domain or "sde").lower() == "core"
         sec_up = sec_name.upper()
 
-        if "SKILLS" in sec_up:
-            non_core_exclude = [
-                "controls, robotics & embedded", "cad & engineering software", "hands-on workshop skills",
-                "solidworks", "autodesk", "ansys", "welding", "forming", "casting", "mechatronics"
-            ]
-            core_exclude = ["generative ai & nlp", "data analysis & visualization"]
-            
+        cleaned = []
+        for l in lines:
+            cl = l.strip()
+            if not cl:
+                continue
+            if cl.startswith('!') or 'Self declared by the student' in cl or 'Created On.:' in cl or 'CDC could not verify' in cl:
+                continue
+            cleaned.append(cl)
+
+        if "SKILLS" in sec_up or "COURSEWORK" in sec_up:
             merged = []
             curr_lbl = ""
             curr_val = ""
-            for l in lines:
-                m = re.match(r'^([A-Za-z0-9\s\&\/\(\)\,\.\-]+?:)(.*)', l)
-                if m and len(m.group(1)) < 40 and not l.startswith(('•', '-', '*')):
+            for l in cleaned:
+                # Strip any accidental bullet prefix so skills and coursework are strictly NEVER bulleted
+                cl_clean = l.lstrip('•-* \t').strip()
+                if not cl_clean:
+                    continue
+                m = re.match(r'^([A-Za-z0-9\s\&\/\(\)\,\.\-]+?:)(.*)', cl_clean)
+                if m and len(m.group(1)) < 55:
                     if curr_lbl:
-                        merged.append((curr_lbl, curr_val.strip()))
+                        merged.append(f"{curr_lbl} {curr_val}".strip())
                     curr_lbl = m.group(1).strip()
                     curr_val = m.group(2).strip()
                 elif curr_lbl:
-                    curr_val += " " + l
+                    curr_val += " " + cl_clean
                 else:
-                    merged.append(("", l))
+                    merged.append(cl_clean)
             if curr_lbl:
-                merged.append((curr_lbl, curr_val.strip()))
-
-            out = []
-            for lbl, val in merged:
-                full_lower = f"{lbl} {val}".lower()
-                if not is_core and any(k in full_lower for k in non_core_exclude):
-                    continue
-                if is_core and any(k in full_lower for k in core_exclude):
-                    continue
-                if lbl:
-                    out.append(f"{lbl} {val}".strip())
-                else:
-                    out.append(val)
-            return out
-
-        if "COURSEWORK" in sec_up:
-            merged = []
-            curr_lbl = ""
-            curr_val = ""
-            for l in lines:
-                m = re.match(r'^([A-Za-z0-9\s\&\/\(\)\,\.\-]+?:)(.*)', l)
-                if m and len(m.group(1)) < 40 and not l.startswith(('•', '-', '*')):
-                    if curr_lbl:
-                        merged.append((curr_lbl, curr_val.strip()))
-                    curr_lbl = m.group(1).strip()
-                    curr_val = m.group(2).strip()
-                elif curr_lbl:
-                    curr_val += " " + l
-                else:
-                    merged.append(("", l))
-            if curr_lbl:
-                merged.append((curr_lbl, curr_val.strip()))
-
-            out = []
-            for lbl, val in merged:
-                full_lower = f"{lbl} {val}".lower()
-                if not is_core and ("core courses" in full_lower or "mechanics of solids" in full_lower):
-                    continue
-                if lbl:
-                    out.append(f"{lbl} {val}".strip())
-                else:
-                    out.append(val)
-            return out
+                merged.append(f"{curr_lbl} {curr_val}".strip())
+            return merged
 
         # For AWARDS, POSITIONS OF RESPONSIBILITY, CERTIFICATIONS, EXTRA CURRICULAR, etc.
         out = []
         extra_count = 0
         award_count = 0
         por_count = 0
-        for l in lines:
+        for cl in cleaned:
+            is_b = cl.startswith(('•', '-', '*'))
+            clean_text = cl.lstrip('•-* ').strip() if is_b else cl
+
             if "EXTRA" in sec_up:
-                if l.startswith(('•', '-', '*')):
-                    if extra_count < 5:
-                        out.append(f"• {l.lstrip('•-* ').strip()}")
-                        extra_count += 1
-                elif l.strip():
-                    if extra_count < 5:
-                        out.append(f"• {l.strip()}")
-                        extra_count += 1
+                if extra_count < 5:
+                    out.append(f"• {clean_text}" if is_b else clean_text)
+                    extra_count += 1
             elif "AWARD" in sec_up or "ACHIEVE" in sec_up:
-                if l.startswith(('•', '-', '*')):
-                    if award_count < 4:
-                        out.append(f"• {l.lstrip('•-* ').strip()}")
-                        award_count += 1
-                elif l.strip():
-                    if award_count < 4:
-                        out.append(f"• {l.strip()}")
-                        award_count += 1
+                if award_count < 4:
+                    out.append(f"• {clean_text}" if is_b else clean_text)
+                    award_count += 1
             elif "POSITION" in sec_up or "LEADERSHIP" in sec_up:
-                if ("|" in l or "[" in l) and not l.startswith(('•', '-', '*')):
+                if ("|" in cl or "[" in cl) and not is_b:
                     if por_count < 2:
-                        out.append(l)
+                        out.append(cl)
                         por_count += 1
                     else:
                         break
                 elif por_count <= 2:
-                    if l.startswith(('•', '-', '*')):
-                        out.append(f"• {l.lstrip('•-* ').strip()}")
-                    else:
-                        out.append(l)
+                    out.append(f"• {clean_text}" if is_b else clean_text)
             else:
-                if l.startswith(('•', '-', '*')):
-                    out.append(f"• {l.lstrip('•-* ').strip()}")
-                else:
-                    out.append(l)
+                out.append(f"• {clean_text}" if is_b else clean_text)
 
         return out
 
