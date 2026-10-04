@@ -13,65 +13,117 @@ logging.basicConfig(level=logging.INFO)
 # ==============================================================================
 GEMINI_RESUME_TAILOR_SYSTEM_PROMPT = """
 You are an expert AI Resume Intelligence Agent for OpportunityOS.
-Your job is to analyze a candidate's complete Master CV, extract all verified projects and internships without losing any bullet points, classify them by technical domain, and produce a JD-tailored 1-page CV selection.
+Your job is to analyze a candidate's complete Master CV (which may contain 40-50+ projects across various domains), classify every project, internship, and competition into technical domain tracks, and produce an optimal, JD-tailored 1-page ATS resume selection.
 
-### STRICT RULES:
-1. **PROJECT BOUNDARY & BULLET INTEGRITY**:
-   - Each project or internship starts with a Title Line (often formatted as `Title | Affiliation/Type [Dates]`).
-   - Each project may have a subtitle / Tech stack line or a 1-line overview.
-   - Each project has bullet points starting with `•`, `-`, or `*`.
-   - A blank line or the next title marks the end of a project.
-   - **DO NOT TRUNCATE, SUMMARIZE, OR SHORTEN ANY BULLET POINT.** Every bullet point under a selected project must be copied 100% in full.
-   - **DO NOT INVENT SYNTHETIC FACTS OR NUMBERS.** Strictly use verified facts from the Master CV.
+### DOMAIN DEFINITIONS & DISAMBIGUATION (CRITICAL):
+- **sde (Software Development)**: Full-Stack Web/App Development, Backend, Frontend, Distributed Systems, Microservices, REST APIs, Database Systems, State Machines, Systems Programming, Compilers.
+  * Examples: BlogSphere Full-Stack, Coal India Summer Intern, Movie Explorer Web App, Distributed Cache, REST APIs.
+  * DO NOT pick Quantitative Finance or Robotics projects for SDE roles!
+- **data (Data Science / AI / ML)**: Machine Learning, Deep Learning, Generative AI, Large Language Models (LLMs), NLP, Computer Vision, Data Science, Data Engineering, Analytics, Forecasting, Recommender Systems.
+  * Examples: BharatGen JEE/NEET Platform, Review Helpfulness Prediction, Image Product Attribute Prediction, Land Cover Classification, Traffic Safety Analytics.
+  * DO NOT pick Quantitative Finance projects for generic Data roles unless the job is specifically in Quantitative Finance.
+- **finance (Quantitative Finance & Trading)**: Quantitative Trading, Algorithmic Trading, Portfolio Optimization (e.g. Bayesian Portfolio Optimizer in C++), Sharpe Ratio, Mean-Variance, Backtesting, Risk Management, Options Pricing, Financial Modeling, Credit Risk Scorecard, HFT.
+  * Examples: Bayesian Portfolio Optimizer using C++, Godrej Housing Finance Risk Analytics, Tata Motors Finance Intern, The Big Brand Theory.
+- **core (Robotics / Mechanical / Embedded / Hardware)**: Robotics, ROS/ROS2, Embedded Systems, Firmware, Microcontrollers (STM32, Arduino, ESP32), Mechanical Design, CAD, SolidWorks, ANSYS, FEA, Control Systems, Power Electronics, Mechatronics, Automotive/EV, Formula Student.
+  * Examples: KE1 Formula Student EV, International Rover Challenge (IRC), STMicroelectronics TIADC Calibration, Digital Voltage Boost Converter.
+- **consult / product (Strategy & Product)**: Business Strategy, Market Entry, Operations Research, Product Management, Case Competitions, Supply Chain Optimization.
 
-2. **DOMAIN CLASSIFICATION**:
-   Classify each project and internship into one of the 5 domains:
-   - `sde`: Software Engineering, Backend, Frontend, Full-stack, REST APIs, Microservices, Systems, Distributed Systems, C++, Java, Node.js, FastAPI, Docker, Kubernetes, Database, Routing, Concurrency, Algorithms, Web App.
-   - `data`: Machine Learning, Deep Learning, NLP, LLMs, Computer Vision, Transformers, PyTorch, TensorFlow, Data Science, Analytics, BI, XGBoost, Scikit-learn, Feature Engineering, Churn, Crop Health, Skin Lesion, Qwen, Unsloth, QLoRA.
-   - `core`: Robotics, Embedded, Microcontrollers (STM32, Arduino, ESP32), ROS, ROS2, Control Systems (PID, LQR, Pure Pursuit), Kinematics, Dynamics, Mechanical, Mechatronics, FEA, SOLIDWORKS, ANSYS, Motor Drivers, Sensors, Drones, Rover, IRC, Vehicle Simulation, Steam Turbine, Stress Field.
-   - `finance`: Quantitative Finance, Trading, Arbitrage, Risk Management, Order Book, Backtesting, Time Series, Stock Forecasting, LSTM, Derivatives, Portfolio Optimization.
-   - `consult`: Consulting, Business Strategy, Market Entry, Operations, Due Diligence, Business Intelligence, Case Study, Product Management, Netflix Content Strategy.
+### STRICT RULES & PRIORITY ORDER:
+1. **DOMAIN FILTERING & CLASSIFICATION (TOP PRIORITY)**:
+   - Accurately classify every entry into its true technical domain (`sde`, `data`, `finance`, `core`, `consult`).
+   - ONLY select items whose primary domain matches the target job domain (`target_domain`)!
+   - Select top 4-5 relevant experience items adhering to the priority order:
+     **COMPETITIONS/CONFERENCES > INTERNSHIPS > PROJECTS**.
 
-3. **DOMAIN VALIDATION GUARDRAIL**:
-   - If the candidate's Master CV contains **ZERO (0)** projects or internships matching the target job domain, you MUST return:
+2. **SECTION ORGANIZATION**:
+   - **Competitions & Conferences**:
+     * If the candidate has participated in relevant competitions/hackathons matching the target domain, place them in `"selected_competitions"`.
+     * If 0 domain competitions, set `"selected_competitions": []`.
+   - **Internships**:
+     * If candidate has >= 2 domain-relevant internships, select top 2 in `"selected_internships"` (set `"has_separate_internships": true`).
+     * If candidate has 1 domain-relevant internship, select 1 in `"selected_internships"` (set `"has_separate_internships": false`).
+     * If candidate has 0 domain-relevant internships, leave `"selected_internships": []` (set `"has_separate_internships": false`).
+   - **Projects**:
+     * Select domain-relevant projects in `"selected_projects"`. Total items across Comps + Interns + Projects must be 4-5.
+
+3. **SINGLE-LINE ATS BULLET CONSTRAINT**:
+   - Every bullet point must be formatted as a high-impact, single-line action statement (max 100-115 characters / 14-17 words) that fits cleanly on a single line on an A4 page without wrapping.
+   - Begin with a strong action verb (e.g., Engineered, Architected, Developed, Optimized, Built, Implemented).
+   - Retain 100% of the verified facts, metrics, and technologies.
+
+4. **CLEAN TITLES & NO TECH LINE**:
+   - Do NOT emit any `Tech: ...` subtitle lines.
+   - Include date range on the header (e.g., `[Nov 2025 - Mar 2026]`).
+
+5. **DOMAIN-TAILORED SKILLS & COURSEWORK FILTERING**:
+   Select ONLY the most relevant skill categories (top 4-5 lines) and coursework categories (top 2-3 lines) matching the target job track from the Master CV:
+   - **For Non-Core Tracks (SDE, Data, Finance, Consult)**:
+     - `SKILLS AND EXPERTISE`: EXCLUDE all CAD, Mechanical, Workshop, and Controls categories (e.g. `Controls, Robotics & Embedded`, `CAD & Engineering Software`, `Hands-on Workshop Skills`). Include only domain-relevant categories.
+     - `COURSEWORK INFORMATION`: EXCLUDE `Core Courses/Labs`. Include relevant categories like `Computer Science & ML`, `Mathematics`, and `MOOCs`.
+     - `CERTIFICATIONS`: Pick top 1-2 most domain-aligned certifications with concise single-line bullets.
+   - **For Core Tracks (Robotics, Mechanical, Embedded, Mechatronics, Control)**:
+     - `SKILLS AND EXPERTISE`: EXCLUDE pure non-core items (e.g. `Generative AI & NLP`, `Data Analysis & Visualization`, pure web stacks). Include `Programming Languages`, `Controls, Robotics & Embedded`, `CAD & Engineering Software`, `Backend & System Design`, `Hands-on Workshop Skills`, `Tools & Deployment`.
+     - `COURSEWORK INFORMATION`: Include `Core Courses/Labs`, `Mathematics`, `Computer Science & ML`.
+     - `CERTIFICATIONS`: Pick top 1-2 core/engineering certifications with concise single-line bullets.
+
+6. **EXTRA CURRICULAR ACTIVITIES & REMAINING SECTIONS**:
+   - Include ONLY **5 top extra-curricular bullet points** from the Master CV.
+   - All other sections in Master CV (Awards, Positions of Responsibility, etc.) are preserved verbatim.
+
+7. **DOMAIN VALIDATION GUARDRAIL**:
+   - If candidate Master CV contains **0** projects/internships matching the target job domain, return:
      `{"error": "NO_DOMAIN_PROJECTS", "message": "No projects found matching the {domain} domain in your Master CV. Please upload or add relevant projects to apply for this role."}`
 
-4. **SELECTION & RANKING**:
-   - If projects are available, select the **top 2-3 closest projects/internships** that best align with the Target Job Description so that all bullet points fit completely on 1 single A4 page.
-
-5. **DYNAMIC INTERNSHIP SEGREGATION**:
-   - If the candidate has **2 or more (>=2) internships/research internships** matching the target profile:
-     Set `"has_separate_internships": true`, and place them in `"selected_internships"`. Place regular projects in `"selected_projects"`.
-   - If there is **1 internship**:
-     Set `"has_separate_internships": false`, and put it at the top of `"selected_internships_and_projects"`.
-   - If there are **0 internships**:
-     Set `"has_separate_internships": false`, and put the projects in `"selected_projects"`.
-
-6. **OUTPUT FORMAT**:
-   Return ONLY a valid JSON object matching this schema:
+8. **OUTPUT FORMAT (JSON ONLY)**:
    ```json
    {
      "target_domain": "sde | data | core | finance | consult",
+     "selected_competitions": [
+       {
+         "name": "Full Title | Organization / Challenge",
+         "dates": "[Month Year - Month Year]",
+         "description": "",
+         "bullets": ["Single-line action bullet 1 (max 115 chars)", "Single-line action bullet 2 (max 115 chars)"]
+       }
+     ],
      "has_separate_internships": boolean,
      "selected_internships": [
        {
          "name": "Full Title | Organization / Advisor",
          "dates": "[Month Year - Month Year]",
-         "tech_stack": "Tech: ... (or empty string)",
-         "description": "1-line overview (or empty string)",
-         "bullets": ["Full non-truncated bullet 1", "Full non-truncated bullet 2"]
+         "description": "",
+         "bullets": ["Single-line action bullet 1 (max 115 chars)", "Single-line action bullet 2 (max 115 chars)"]
        }
      ],
      "selected_projects": [
        {
-         "name": "Full Project Title | Type",
+         "name": "Full Title | Type",
          "dates": "[Month Year - Month Year]",
-         "tech_stack": "Tech: ... (or empty string)",
-         "description": "1-line overview (or empty string)",
-         "bullets": ["Full non-truncated bullet 1", "Full non-truncated bullet 2", "Full non-truncated bullet 3"]
+         "description": "",
+         "bullets": ["Single-line action bullet 1 (max 115 chars)", "Single-line action bullet 2 (max 115 chars)"]
        }
      ],
-     "rationale": "Brief reason why these projects were chosen for this JD"
+     "selected_skills": [
+       "Programming Languages: Python | C | C++ | SQL | Node.js",
+       "Backend & System Design: FastAPI | REST APIs | Pydantic | PostgreSQL | Docker"
+     ],
+     "selected_certifications": [
+       {
+         "name": "Machine Learning Specialization | DeepLearning.AI & Stanford University",
+         "bullets": ["Trained neural networks with optimization strategies and deep learning deployment"]
+       }
+     ],
+     "selected_coursework": [
+       "Computer Science & ML: Programming and Data Structures (with Lab) | Essentials of Machine Learning"
+     ],
+     "selected_extracurriculars": [
+       "• Secured Gold in Ad Design at the Inter-Hall General Championship (2026), representing Nehru Hall",
+       "• Secured 2nd runners-up position in the OpenIIT Data Analytics (2025), delivering analytical insights",
+       "• Revived Open IIT Digital Music Making after 2 years, managing end-to-end execution solo at zero cost",
+       "• Introduced Open IIT Rap in Sep'24 to promote rap culture, overseeing budgeting, logistics, and outreach",
+       "• Competed in Inter-Hall General Championship Data Analytics (2026) as part of the hall team"
+     ],
+     "rationale": "Brief selection rationale"
    }
    ```
 """
@@ -114,93 +166,27 @@ class GeminiTailorAgent:
         return "sde"
 
     @staticmethod
-    def parse_blocks_from_raw_cv(master_cv_text: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    def parse_blocks_from_raw_cv(master_cv_text: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
         """
-        Deterministic block-level parser using blank lines and bold project titles
-        to extract projects and internships with 100% full multi-line bullets.
+        Generic block-level parser using MasterCVParser to extract projects, internships,
+        and competitions without hardcoded regexes.
         """
-        norm_text = re.sub(r'\r\n', '\n', master_cv_text)
-        
-        # Match project and internship header lines
-        pattern = re.compile(
-            r'(?m)^([A-Z0-9][A-Za-z0-9\s\-\:\(\)\,\.\/\&]+?\s*\|\s*(?:Self Project|Team|OpenIIT|Challenge|Hackathon|Lab|Research|Project|Advisor|Dr\.|Prof\.|Mechatronics|LTF|Carnegie|Bajaj|NTPC|CoEAMT|Finalist|Google|DeepLearning|Singrauli|Vocational|Technology Filmmaking)[^\n]*)'
-        )
-
-        matches = list(pattern.finditer(norm_text))
+        from app.tools.cv_parser_engine import MasterCVParser
+        all_items = MasterCVParser.parse_projects_from_markdown(master_cv_text)
         projects = []
         internships = []
+        competitions = []
 
-        for idx, match in enumerate(matches):
-            header_full = match.group(1).strip()
-            
-            # Clean non-title prefixes if attached
-            for prefix in ["INTERNSHIPS", "PROJECTS", "COMPETITION/CONFERENCE", "COMPETITIONS"]:
-                if header_full.startswith(prefix):
-                    header_full = header_full[len(prefix):].strip()
-
-            start_pos = match.end()
-            end_pos = matches[idx + 1].start() if idx + 1 < len(matches) else len(norm_text)
-            
-            body_block = norm_text[start_pos:end_pos].strip()
-            
-            # Stop if hit other major sections (Skills, Certifications, Coursework, etc.)
-            sec_break = re.search(r'(?m)^(SKILLS AND EXPERTISE|SKILLS|CERTIFICATIONS|COURSEWORK INFORMATION|COURSEWORK|POSITIONS OF RESPONSIBILITY|EXTRA CURRICULAR ACTIVITIES)', body_block)
-            if sec_break:
-                body_block = body_block[:sec_break.start()].strip()
-
-            lines = [l.strip() for l in body_block.splitlines() if l.strip()]
-
-            # Extract date from header line
-            date_match = re.search(r'\[([A-Za-z0-9\s\-\–\—\.]+)\]', header_full)
-            dates = date_match.group(0) if date_match else ""
-            clean_title = header_full
-            if dates:
-                clean_title = header_full.replace(dates, "").strip().rstrip('| ')
-
-            tech_line = ""
-            summary_lines = []
-            bullets = []
-            current_bullet = ""
-
-            for l in lines:
-                if l.lower().startswith("tech:"):
-                    tech_line = l
-                elif l.startswith(('•', '-', '*')):
-                    if current_bullet:
-                        bullets.append(current_bullet.strip())
-                    current_bullet = l.lstrip('•-* ').strip()
-                else:
-                    if current_bullet:
-                        current_bullet += " " + l
-                    else:
-                        summary_lines.append(l)
-
-            if current_bullet:
-                bullets.append(current_bullet.strip())
-
-            full_text = f"{clean_title} {dates}\n{tech_line}\n" + " ".join(summary_lines) + "\n" + "\n".join(bullets)
-            from app.tools.cv_parser_engine import MasterCVParser
-            domain = MasterCVParser.infer_domain(full_text)
-            tech = MasterCVParser.extract_tech_stack(full_text)
-
-            item = {
-                "name": clean_title,
-                "dates": dates,
-                "tech_stack": tech_line,
-                "description": " ".join(summary_lines).strip(),
-                "bullets": bullets if bullets else [" ".join(summary_lines).strip()],
-                "domain": domain,
-                "tech_list": tech,
-                "full_text": full_text
-            }
-
-            is_intern = ("intern" in clean_title.lower() or "advisor" in clean_title.lower() or "cmu" in clean_title.lower() or "ntpc" in clean_title.lower() or "coeamt" in clean_title.lower())
-            if is_intern and "PROJECT" not in clean_title.upper() and "SELF PROJECT" not in clean_title.upper():
+        for item in all_items:
+            i_type = item.get("type", "project")
+            if i_type == "competition":
+                competitions.append(item)
+            elif i_type == "internship":
                 internships.append(item)
             else:
                 projects.append(item)
 
-        return projects, internships
+        return projects, internships, competitions
 
     @staticmethod
     def tailor_with_llm(
@@ -217,9 +203,9 @@ class GeminiTailorAgent:
         logger.info(f"🧠 [GeminiTailorAgent] Invoked for Role: '{job.get('title')}' at '{job.get('company')}' (Target Domain: {target_domain.upper()})")
         logger.info(f"🔑 [GeminiTailorAgent] Gemini API Key present: {bool(api_key)}")
 
-        # Step 1: Extract block-level projects & internships
-        all_projects, all_internships = GeminiTailorAgent.parse_blocks_from_raw_cv(master_cv_text)
-        logger.info(f"📦 [GeminiTailorAgent] Extracted {len(all_projects)} projects and {len(all_internships)} internships from Master CV")
+        # Step 1: Extract block-level projects, internships & competitions
+        all_projects, all_internships, all_competitions = GeminiTailorAgent.parse_blocks_from_raw_cv(master_cv_text)
+        logger.info(f"📦 [GeminiTailorAgent] Extracted {len(all_projects)} projects, {len(all_internships)} internships, {len(all_competitions)} competitions from Master CV")
 
         # Step 2: If Gemini API is available, invoke Gemini
         if api_key:
@@ -274,7 +260,7 @@ CANDIDATE MASTER CV (RAW TEXT):
                     if parsed.get("error") == "NO_DOMAIN_PROJECTS":
                         raise ValueError(parsed.get("message", f"No projects found matching the {target_domain.upper()} domain in your Master CV."))
 
-                    if parsed.get("selected_projects") or parsed.get("selected_internships"):
+                    if parsed.get("selected_projects") or parsed.get("selected_internships") or parsed.get("selected_competitions"):
                         return parsed
 
             except ValueError as ve:
@@ -283,20 +269,69 @@ CANDIDATE MASTER CV (RAW TEXT):
                 logger.warning(f"⚠️ [GeminiTailorAgent] Gemini API fallback to AST Engine: {e}")
 
         # Step 3: High-Precision Deterministic AST Engine Fallback
-        domain_projects = [
-            p for p in all_projects
-            if p.get("domain", "").lower() == target_domain
-        ]
+        def condense_bullet(b_str: str, max_chars: int = 115) -> str:
+            clean = b_str.strip().lstrip('•-* ')
+            if len(clean) <= max_chars:
+                return clean
+            # Trim trailing clauses / secondary phrases if overly long
+            parts = re.split(r'[,;]\s*(?:achieving|reducing|resulting|delivering|thus|with|across|supporting)\b', clean, flags=re.I)
+            if len(parts) > 1 and len(parts[0]) >= 40:
+                shortened = parts[0].strip()
+                if len(shortened) <= max_chars:
+                    return shortened
+            # Fallback concise word truncation
+            words = clean.split()
+            cand = ""
+            for w in words:
+                if len(cand) + len(w) + 1 <= max_chars:
+                    cand = (cand + " " + w).strip()
+                else:
+                    break
+            return cand or clean[:max_chars]
 
-        if not domain_projects:
-            combined_jd = f"{job.get('title', '')} {job.get('description', '')} {' '.join(job.get('required_skills', []))}".lower()
-            for p in all_projects:
-                p_text = f"{p.get('name', '')} {p.get('description', '')} {' '.join(p.get('bullets', []))}".lower()
-                if any(w in p_text for w in combined_jd.split() if len(w) > 4):
-                    domain_projects.append(p)
+        req_skills = [s.lower() for s in job.get("required_skills", [])]
+        combined_jd = f"{job.get('title', '')} {job.get('description', '')} {' '.join(job.get('required_skills', []))}".lower()
 
-        # STRICT GUARDRAIL: If 0 projects found in domain
-        if not domain_projects and not all_internships:
+        def score_item(item: Dict[str, Any]) -> float:
+            score = 0.0
+            i_type = item.get("type", "project").lower()
+            name_lower = item.get("name", "").lower()
+            p_text = f"{item.get('name', '')} {item.get('description', '')} {' '.join(item.get('bullets', []))}".lower()
+            
+            # 1. Domain Relevance (Highest Weight)
+            if item.get("domain") == target_domain:
+                score += 25.0
+            else:
+                for s in req_skills:
+                    if s in p_text:
+                        score += 6.0
+                for tok in job.get("title", "").lower().split():
+                    if len(tok) > 3 and tok in p_text:
+                        score += 4.0
+
+            # 2. Priority Order: Competition > Internship > Project
+            if any(k in name_lower for k in ["challenge", "competition", "hackathon", "finalist", "contest", "conference"]) or i_type == "competition":
+                score += 5.0
+            elif i_type == "internship" or "intern" in name_lower or "advisor" in name_lower:
+                score += 3.0
+            else:
+                score += 1.0
+
+            for s in req_skills:
+                if s in p_text:
+                    score += 3.0
+
+            return score
+
+        all_items = all_competitions + all_internships + all_projects
+        domain_items = [it for it in all_items if it.get("domain", "").lower() == target_domain]
+        if not domain_items:
+            for it in all_items:
+                it_text = f"{it.get('name', '')} {it.get('description', '')} {' '.join(it.get('bullets', []))}".lower()
+                if any(w in it_text for w in combined_jd.split() if len(w) > 4):
+                    domain_items.append(it)
+
+        if not domain_items:
             domain_label = {
                 "core": "Core (Robotics/Mechanical/Embedded)",
                 "sde": "Software Development (SDE/Backend/Fullstack)",
@@ -309,33 +344,47 @@ CANDIDATE MASTER CV (RAW TEXT):
                 f"Please add relevant projects for {job.get('title', 'this role')} before applying."
             )
 
-        # Score and rank domain projects
-        req_skills = [s.lower() for s in job.get("required_skills", [])]
-        scored = []
-        for p in domain_projects if domain_projects else all_projects:
-            score = 0.0
-            p_text = f"{p.get('name', '')} {p.get('description', '')} {' '.join(p.get('bullets', []))}".lower()
-            for s in req_skills:
-                if s in p_text:
-                    score += 5.0
-            for tok in job.get("title", "").lower().split():
-                if len(tok) > 3 and tok in p_text:
-                    score += 3.5
-            if p.get("domain") == target_domain:
-                score += 4.0
-            scored.append((score, p))
+        scored_comps = [(score_item(it), it) for it in all_competitions]
+        scored_comps.sort(key=lambda x: x[0], reverse=True)
 
-        scored.sort(key=lambda x: x[0], reverse=True)
-        
-        has_separate_internships = len(all_internships) >= 2
-        selected_internships = all_internships[:2] if has_separate_internships else all_internships[:1]
-        proj_count = 2 if has_separate_internships else 3
-        selected_projects = [p for _, p in scored[:proj_count]]
+        scored_internships = [(score_item(it), it) for it in all_internships]
+        scored_internships.sort(key=lambda x: x[0], reverse=True)
+
+        scored_projects = [(score_item(it), it) for it in all_projects]
+        scored_projects.sort(key=lambda x: x[0], reverse=True)
+
+        def prepare_item(it_dict):
+            bullets = [condense_bullet(b) for b in it_dict.get("bullets", [])]
+            return {
+                "name": it_dict.get("name", ""),
+                "dates": it_dict.get("dates", ""),
+                "description": "",
+                "bullets": bullets
+            }
+
+        # Filter domain competitions, internships, and projects
+        domain_comps = [it for it in scored_comps if it[1].get("domain") == target_domain or it[0] >= 20.0]
+        domain_interns = [it for it in scored_internships if it[1].get("domain") == target_domain or it[0] >= 20.0]
+        if not domain_interns and scored_internships:
+            domain_interns = scored_internships[:1]
+
+        domain_projs = [it for it in scored_projects if it[1].get("domain") == target_domain or it[0] >= 20.0]
+        if not domain_projs and scored_projects:
+            domain_projs = scored_projects
+
+        selected_comps = [prepare_item(it[1]) for it in domain_comps[:1]] if domain_comps else []
+        has_separate_internships = len(domain_interns) >= 2
+        selected_internships = [prepare_item(it[1]) for it in domain_interns[:2]] if has_separate_internships else ([prepare_item(it[1]) for it in domain_interns[:1]] if domain_interns else [])
+
+        total_used = len(selected_comps) + len(selected_internships)
+        needed_projects = max(1, 5 - total_used)
+        selected_projects = [prepare_item(it[1]) for it in domain_projs[:needed_projects]]
 
         return {
             "target_domain": target_domain,
+            "selected_competitions": selected_comps,
             "has_separate_internships": has_separate_internships,
             "selected_internships": selected_internships,
             "selected_projects": selected_projects,
-            "rationale": f"Selected top {len(selected_projects)} domain-aligned projects and {len(selected_internships)} internships matching {job.get('title')}."
+            "rationale": f"Selected top domain-aligned experience in priority COMPS > INTERN > PROJECT."
         }

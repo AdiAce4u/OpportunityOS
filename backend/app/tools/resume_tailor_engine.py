@@ -63,32 +63,109 @@ class ResumeTailorEngine:
         return [p for _, p in scored[:max_projects]]
 
     @staticmethod
+    def parse_education_rows(lines: List[str]) -> List[List[str]]:
+        """
+        Parses multi-line vertical PDF text dumps or single-line education records
+        into structured [Year, Degree/Exam, Institute, CGPA/Marks] rows.
+        Guarantees that header rows ('Year | Degree...') and table borders are strictly excluded.
+        """
+        rows = []
+        clean_lines = []
+        for l in lines:
+            cl = l.strip().strip('|').strip()
+            if not cl:
+                continue
+            cl_lower = cl.lower()
+            if any(k in cl_lower for k in ["degree/exam", "cgpa/marks", "institute/school", "marks/cgpa"]) and ("year" in cl_lower or "degree" in cl_lower):
+                continue
+            if cl_lower in ["education", "academic background", "year", "degree", "institute", "cgpa", "marks"]:
+                continue
+            clean_lines.append(cl)
+
+        i = 0
+        while i < len(clean_lines):
+            l = clean_lines[i]
+            
+            # 1. Pipe-separated row
+            if '|' in l:
+                parts = [p.strip() for p in l.split('|') if p.strip()]
+                if parts and parts[0].lower() in ["year", "degree", "degree/exam", "sl", "s.no"]:
+                    i += 1
+                    continue
+                if len(parts) >= 4:
+                    rows.append(parts[:4])
+                    i += 1
+                    continue
+                elif len(parts) == 3:
+                    rows.append([parts[0], parts[1], parts[2], ""])
+                    i += 1
+                    continue
+
+            # 2. Single-line regex match
+            m = re.match(r'^(\d{4})\s+(.+?)\s+(IIT\s+[A-Za-z]+|[A-Za-z\s\.\'\-]+?(?:School|College|Institute|University|Vidyalaya|Academy|Council|Board))\s+([0-9\.]+\s*(?:\/\s*10|%|\/\s*100)?)', l, re.I)
+            if m:
+                rows.append([m.group(1).strip(), m.group(2).strip(), m.group(3).strip(), m.group(4).strip()])
+                i += 1
+                continue
+
+            # 3. Multi-line vertical dump starting with 4-digit year
+            if re.match(r'^\d{4}$', l):
+                year = l
+                degree = clean_lines[i+1] if i+1 < len(clean_lines) else ""
+                institute = clean_lines[i+2] if i+2 < len(clean_lines) else ""
+                grade = clean_lines[i+3] if i+3 < len(clean_lines) else ""
+                advance = 4
+                if i+4 < len(clean_lines) and re.match(r'^\/?\s*10$', clean_lines[i+4]):
+                    grade += " " + clean_lines[i+4]
+                    advance = 5
+                rows.append([year, degree, institute, grade])
+                i += advance
+                continue
+
+            # 4. Fallback whitespace split starting with 4-digit year
+            parts = l.split()
+            if len(parts) >= 4 and parts[0].isdigit() and len(parts[0]) == 4:
+                rows.append([parts[0], " ".join(parts[1:3]), " ".join(parts[3:-1]) if len(parts) > 4 else parts[3], parts[-1]])
+                i += 1
+                continue
+
+            i += 1
+
+        return rows
+
+    @staticmethod
     def tailor_cv(job: Dict[str, Any], profile: Dict[str, Any]) -> str:
         """
         Agentic tailoring pipeline:
         1. Executes Gemini LLM (or fallback AST engine) on the full master CV.
-        2. Enforces domain guardrail.
-        3. Segregates internships and projects with complete full bullet points.
-        4. Stitches the document preserving all fixed sections in exact CDC format.
+        2. Enforces domain guardrail and strict technical domain classification.
+        3. Segregates competitions, internships, and projects adhering to priority:
+           COMPETITIONS/CONFERENCES > INTERNSHIPS > PROJECTS.
+        4. Stitches the document preserving 100% of all other Master CV sections
+           (Header, Education Table, Awards, POR, Skills, Coursework, Certifications, Extracurriculars)
+           in exact Master CV order and format without any hardcoding.
         """
         master_cv_text = profile.get("master_cv_markdown") or profile.get("resume_text") or profile.get("raw_text") or ""
         
-        # If master_cv_text is empty, build a synthetic representation from profile fields
+        # If master_cv_text is empty, build a synthetic representation from profile fields dynamically
         if not master_cv_text:
+            c_name = profile.get('name') or "Candidate"
+            c_roll = profile.get('roll') or ""
+            c_deg = profile.get('degree') or "B.Tech in Engineering"
+            c_col = profile.get('college') or "IIT Kharagpur"
+            c_cgpa = profile.get('cgpa') or "8.0"
+            c_yr = profile.get('graduation_year') or "2028"
+
+            hdr = f"{c_name} | {c_roll}".strip(" |")
             lines = [
-                f"{profile.get('name', 'VAIBHAV ANAND')} | {profile.get('roll', '24ME10168')}",
-                f"{profile.get('degree', 'B.Tech.(Hons.) in MECHANICAL ENGINEERING')}",
+                hdr,
+                c_deg,
                 "EDUCATION",
-                f"2028 B.TECH {profile.get('college', 'IIT Kharagpur')} {profile.get('cgpa', 8.39)} / 10",
+                f"{c_yr} | {c_deg} | {c_col} | {c_cgpa} / 10",
                 "PROJECTS"
             ]
             for p in profile.get("projects", []):
                 lines.append(f"{p.get('name')} | Self Project")
-                if p.get("tech_stack"):
-                    techs = p.get("tech_stack")
-                    if isinstance(techs, list):
-                        techs = ", ".join(techs)
-                    lines.append(f"Tech: {techs}")
                 if p.get("description"):
                     lines.append(p.get("description"))
                 for b in p.get("bullets", []):
@@ -96,40 +173,62 @@ class ResumeTailorEngine:
                 lines.append("")
             master_cv_text = "\n".join(lines)
 
+        from app.tools.cv_parser_engine import MasterCVParser
+        sections_order, sections_map, proj_section_names = MasterCVParser.parse_master_cv_full_sections(master_cv_text)
+
         # Execute Gemini LLM Tailoring Agent
         llm_result = GeminiTailorAgent.tailor_with_llm(master_cv_text, job)
+        target_domain = llm_result.get("target_domain") or GeminiTailorAgent.infer_target_domain(job)
 
+        selected_competitions = llm_result.get("selected_competitions", [])
         has_separate_internships = llm_result.get("has_separate_internships", False)
         selected_internships = llm_result.get("selected_internships", [])
         selected_projects = llm_result.get("selected_projects", [])
 
-        candidate_name = profile.get("name", "VAIBHAV ANAND")
-        roll = profile.get("roll", "24ME10168")
-        degree = profile.get("degree", "B.Tech.(Hons.) in MECHANICAL ENGINEERING")
-        college = profile.get("college", "IIT Kharagpur")
-        grad_year = profile.get("graduation_year", 2028)
-        cgpa = profile.get("cgpa", 8.39)
+        # 1. Candidate Header
+        header_lines = sections_map.get("HEADER", [])
+        if not header_lines:
+            c_name = profile.get("name", "Candidate")
+            c_roll = profile.get("roll", "")
+            c_deg = profile.get("degree", "B.Tech in Engineering")
+            header_lines = [f"{c_name} | {c_roll}".strip(" |"), c_deg]
 
-        doc_lines = [
-            f"{candidate_name.upper()}  |  {roll}",
-            f"{degree}",
-            "",
-            "EDUCATION",
-            "Year Degree/Exam Institute CGPA/Marks",
-            f"{grad_year} B.TECH {college} {cgpa} / 10",
-            "2024 AISSCE (Class XII) Patna Doon Public School 95.8%",
-            "2022 AISSE (Class X) St.Michael's High School 98.4%",
-            ""
-        ]
+        # 2. Candidate Education
+        edu_raw = sections_map.get("EDUCATION", [])
+        if not edu_raw and (profile.get("college") or profile.get("graduation_year")):
+            edu_raw = [
+                f"{profile.get('graduation_year', 2028)} | {profile.get('degree', 'B.Tech')} | {profile.get('college', 'University')} | {profile.get('cgpa', '8.0')} / 10"
+            ]
+        edu_rows = ResumeTailorEngine.parse_education_rows(edu_raw)
 
-        # Dynamic Section: Internships & Projects
-        if has_separate_internships and selected_internships:
+        doc_lines = []
+        doc_lines.extend(header_lines)
+        if edu_rows:
+            doc_lines.append("")
+            doc_lines.append("EDUCATION")
+            for r in edu_rows:
+                doc_lines.append(f"{r[0]} | {r[1]} | {r[2]} | {r[3]}")
+            doc_lines.append("")
+
+        # 3. Dynamic Experience Section (The ONLY modified section)
+        # 3A. Competitions & Conferences Section (Top Priority if present)
+        if selected_competitions:
+            doc_lines.append("COMPETITIONS/CONFERENCES")
+            for comp in selected_competitions:
+                date_str = comp.get("dates") or ""
+                doc_lines.append(f"{comp.get('name')}  {date_str}".strip())
+                if comp.get("description"):
+                    doc_lines.append(f"{comp.get('description')}")
+                for b in comp.get("bullets", []):
+                    doc_lines.append(f"• {b}")
+                doc_lines.append("")
+
+        # 3B. Internships and Projects Section (Determined by internship count)
+        if len(selected_internships) >= 2 or (has_separate_internships and selected_internships):
             doc_lines.append("INTERNSHIPS")
             for int_item in selected_internships[:2]:
-                date_str = int_item.get("dates") or "[Nov 2025 - Mar 2026]"
-                doc_lines.append(f"{int_item.get('name')}  {date_str}")
-                if int_item.get("tech_stack"):
-                    doc_lines.append(f"{int_item.get('tech_stack')}")
+                date_str = int_item.get("dates") or ""
+                doc_lines.append(f"{int_item.get('name')}  {date_str}".strip())
                 if int_item.get("description"):
                     doc_lines.append(f"{int_item.get('description')}")
                 for b in int_item.get("bullets", []):
@@ -137,86 +236,70 @@ class ResumeTailorEngine:
                 doc_lines.append("")
 
             doc_lines.append("PROJECTS")
-            proj_limit = 1 if len(selected_internships) >= 2 else 2
+            proj_limit = max(1, 4 - (len(selected_competitions) + len(selected_internships[:2])))
             for p in selected_projects[:proj_limit]:
-                date_str = p.get("dates") or "[May 2026 - Jun 2026]"
-                doc_lines.append(f"{p.get('name')}  {date_str}")
-                tech_val = p.get("tech_stack")
-                if tech_val:
-                    if isinstance(tech_val, list):
-                        doc_lines.append(f"Tech: {', '.join(tech_val)}")
-                    else:
-                        doc_lines.append(f"{tech_val}")
+                date_str = p.get("dates") or ""
+                doc_lines.append(f"{p.get('name')}  {date_str}".strip())
                 if p.get("description"):
                     doc_lines.append(f"{p.get('description')}")
                 for b in p.get("bullets", []):
                     doc_lines.append(f"• {b}")
                 doc_lines.append("")
-        else:
-            sec_hdr = "INTERNSHIPS AND PROJECTS" if selected_internships else "PROJECTS"
-            doc_lines.append(sec_hdr)
-            
+        elif len(selected_internships) == 1:
+            doc_lines.append("INTERNSHIPS AND PROJECTS")
             for int_item in selected_internships[:1]:
-                date_str = int_item.get("dates") or "[Nov 2025 - Mar 2026]"
-                doc_lines.append(f"{int_item.get('name')}  {date_str}")
-                tech_val = int_item.get("tech_stack")
-                if tech_val:
-                    if isinstance(tech_val, list):
-                        doc_lines.append(f"Tech: {', '.join(tech_val)}")
-                    else:
-                        doc_lines.append(f"{tech_val}")
+                date_str = int_item.get("dates") or ""
+                doc_lines.append(f"{int_item.get('name')}  {date_str}".strip())
                 if int_item.get("description"):
                     doc_lines.append(f"{int_item.get('description')}")
                 for b in int_item.get("bullets", []):
                     doc_lines.append(f"• {b}")
                 doc_lines.append("")
 
-            proj_limit = 2 if selected_internships else 3
+            proj_limit = max(1, 4 - (len(selected_competitions) + 1))
             for p in selected_projects[:proj_limit]:
-                date_str = p.get("dates") or "[May 2026 - Jun 2026]"
-                doc_lines.append(f"{p.get('name')}  {date_str}")
-                tech_val = p.get("tech_stack")
-                if tech_val:
-                    if isinstance(tech_val, list):
-                        doc_lines.append(f"Tech: {', '.join(tech_val)}")
-                    else:
-                        doc_lines.append(f"{tech_val}")
+                date_str = p.get("dates") or ""
+                doc_lines.append(f"{p.get('name')}  {date_str}".strip())
+                if p.get("description"):
+                    doc_lines.append(f"{p.get('description')}")
+                for b in p.get("bullets", []):
+                    doc_lines.append(f"• {b}")
+                doc_lines.append("")
+        else:
+            doc_lines.append("PROJECTS")
+            proj_limit = max(2, 4 - len(selected_competitions))
+            for p in selected_projects[:proj_limit]:
+                date_str = p.get("dates") or ""
+                doc_lines.append(f"{p.get('name')}  {date_str}".strip())
                 if p.get("description"):
                     doc_lines.append(f"{p.get('description')}")
                 for b in p.get("bullets", []):
                     doc_lines.append(f"• {b}")
                 doc_lines.append("")
 
-        # Fixed Static Sections (Exact Master Format)
-        doc_lines.extend([
-            "SKILLS AND EXPERTISE",
-            "Programming Languages/Libraries: C/ C++ | Python | HTML | CSS | Numpy | Pandas | Tensorflow | Matplotlib | Seaborn | Plotly | Node.Js",
-            "Skills: Machine Learning | Deep Learning | Natural Language Processing | Data Structures and Algorithms | Object-Oriented Programming",
-            "Software and Tools: Jupyter Notebook | GitHub | MySQL | Visual Studio Code | HuggingFace Spaces | FastAPI | Gradio | Arduino IDE",
-            "",
-            "CERTIFICATIONS",
-            "Machine Learning Specialization | DeepLearning.AI & Stanford University",
-            "• Implemented supervised learning including regression, classification and model evaluation techniques for predictive modeling tasks",
-            "• Learned neural networks with optimization strategies, training methodologies and end-to-end deep learning model implementation",
-            "• Explored unsupervised learning including clustering, anomaly detection and practical recommender system development techniques",
-            "",
-            "COURSEWORK INFORMATION",
-            "Mathematics: Linear Algebra | Advanced Calculus | Probability and Statistics | Integral Transforms | Partial Differential Equations",
-            "Computer Science: Programming and Data Structures (with Lab) | Essentials of Machine Learning",
-            "MOOCs: Machine Learning Specialization (DeepLearning.AI & Stanford University) | Deep Learning Coursework (CampusX)",
-            "",
-            "POSITIONS OF RESPONSIBILITY",
-            "Governing Batch Member | Technology Filmmaking and Photography Society (TFPS)  [Nov 2025 - Present]",
-            "• Contributed to 5+ short-film scripts, collaborating on story development, screenplay structure, dialogues and scene-level narrative flow",
-            "• Worked as part of production teams for 3 short films, contributing to planning, coordination and overall filmmaking process execution",
-            "• Participated in 2 photostory projects, contributing to visual storytelling, photography, composition and creative direction collectively",
-            "",
-            "EXTRA CURRICULAR ACTIVITIES",
-            "• Secured Gold in Ad Design at the Inter-Hall General Championship (2026), representing Nehru Hall in creative design competitions",
-            "• Secured 2nd runners-up position in the OpenIIT Data Analytics (2025), delivering data-driven insights through rigorous analytical thinking",
-            "• Represented the team of Nehru hall in the Inter-Hall General Championship events (2026) for Short Film Making and Photostory events",
-            "• Competed in Inter-Hall General Championship Data Analytics (2026) as part of the hall team, demonstrating strong teamwork skills"
-        ])
+        # 4. 100% Full Preservation of ALL Other Static Sections in Master CV Order
+        # (AWARDS AND ACHIEVEMENTS, POSITIONS OF RESPONSIBILITY, SKILLS, COURSEWORK, CERTIFICATIONS, EXTRA CURRICULAR, etc.)
+        for sec in sections_order:
+            if sec in ["HEADER", "EDUCATION"] or sec in proj_section_names:
+                continue
+            
+            # Check if LLM provided tailored replacements for Skills or Coursework
+            if "SKILLS" in sec.upper() and llm_result.get("selected_skills"):
+                doc_lines.extend(["", sec])
+                for sk in llm_result.get("selected_skills"):
+                    doc_lines.append(sk)
+                continue
+
+            if "COURSEWORK" in sec.upper() and llm_result.get("selected_coursework"):
+                doc_lines.extend(["", sec])
+                for cw in llm_result.get("selected_coursework"):
+                    doc_lines.append(cw)
+                continue
+
+            formatted_sec_lines = MasterCVParser.format_static_section_lines(sections_map[sec], sec, target_domain)
+            if formatted_sec_lines:
+                doc_lines.extend(["", sec])
+                doc_lines.extend(formatted_sec_lines)
 
         return "\n".join(doc_lines)
 
@@ -224,13 +307,14 @@ class ResumeTailorEngine:
     def generate_pdf(tailored_text: str, output_path: str) -> str:
         """
         Renders the tailored resume into an exact ATS-compliant 1-page A4 PDF document:
-        - Font size 10.0 - 11.0 pt throughout all sections for clean, professional readability
+        - Font size 9.0 - 10.0 pt with 100% UNIFORM left indentation across all sections (0 margin offset)
         - Full-width shaded banner section headings (#E6EFF8)
-        - 4-column education table
-        - 2-column project/internship headers with right-aligned bold dates
-        - Complete non-truncated multi-line bullets with clean indentation
-        - No CDC footer
-        - Fills the entire A4 sheet proportionally within strictly 1 page.
+        - 4-column education table (0 left padding)
+        - 2-column project/internship headers with right-aligned bold dates (0 left padding)
+        - Single-line ATS bullet points starting flush from left margin
+        - No Tech line below project titles
+        - Clean section spacing and non-bold category content (bold label only)
+        - Strictly 1 page on A4.
         """
         os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
         
@@ -242,25 +326,24 @@ class ResumeTailorEngine:
             doc = SimpleDocTemplate(
                 output_path,
                 pagesize=A4,
-                leftMargin=16,
-                rightMargin=16,
-                topMargin=12,
-                bottomMargin=12
+                leftMargin=15,
+                rightMargin=15,
+                topMargin=10,
+                bottomMargin=10
             )
             
             styles = getSampleStyleSheet()
-            page_width = A4[0] - 32  # 563.27 pt
+            page_width = A4[0] - 30  # 565.27 pt
 
-            # Styles with font size 10-11 pt
-            title_style = ParagraphStyle("CDCTitle", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=base_fs + 1.2, leading=base_fs + 2.5, alignment=1, textColor=colors.black)
-            sub_style = ParagraphStyle("CDCSub", parent=styles["Normal"], fontName="Helvetica", fontSize=base_fs, leading=base_fs + 1.4, alignment=1, textColor=colors.black)
-            sec_banner_style = ParagraphStyle("CDCBanner", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=base_fs, leading=base_fs + 1.4, alignment=1, textColor=colors.black)
-            item_title_left = ParagraphStyle("CDCItemLeft", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=base_fs, leading=base_fs + 1.4, textColor=colors.black)
-            item_title_right = ParagraphStyle("CDCItemRight", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=base_fs, leading=base_fs + 1.4, alignment=2, textColor=colors.black)
-            tech_style = ParagraphStyle("CDCTech", parent=styles["Normal"], fontName="Helvetica-Oblique", fontSize=base_fs, leading=base_fs + 1.3, textColor=colors.HexColor("#1E293B"))
-            summary_style = ParagraphStyle("CDCSummary", parent=styles["Normal"], fontName="Helvetica-Oblique", fontSize=base_fs, leading=base_fs + 1.3, textColor=colors.HexColor("#1E293B"))
-            bullet_style = ParagraphStyle("CDCBullet", parent=styles["Normal"], fontName="Helvetica", fontSize=base_fs, leading=base_fs + 1.4, textColor=colors.black, leftIndent=8)
-            cat_style = ParagraphStyle("CDCCategory", parent=styles["Normal"], fontName="Helvetica", fontSize=base_fs, leading=base_fs + 1.4, textColor=colors.black)
+            # Styles with 100% UNIFORM left margin (leftIndent = 0)
+            title_style = ParagraphStyle("CDCTitle", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=base_fs + 1.0, leading=base_fs + 1.8, alignment=1, textColor=colors.black, leftIndent=0, rightIndent=0, firstLineIndent=0)
+            sub_style = ParagraphStyle("CDCSub", parent=styles["Normal"], fontName="Helvetica", fontSize=base_fs, leading=base_fs + 1.2, alignment=1, textColor=colors.black, leftIndent=0, rightIndent=0, firstLineIndent=0)
+            sec_banner_style = ParagraphStyle("CDCBanner", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=base_fs, leading=base_fs + 1.2, alignment=1, textColor=colors.black, leftIndent=0, rightIndent=0, firstLineIndent=0)
+            item_title_left = ParagraphStyle("CDCItemLeft", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=base_fs, leading=base_fs + 1.2, textColor=colors.black, leftIndent=0, rightIndent=0, firstLineIndent=0)
+            item_title_right = ParagraphStyle("CDCItemRight", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=base_fs, leading=base_fs + 1.2, alignment=2, textColor=colors.black, leftIndent=0, rightIndent=0, firstLineIndent=0)
+            summary_style = ParagraphStyle("CDCSummary", parent=styles["Normal"], fontName="Helvetica-Oblique", fontSize=base_fs - 0.4, leading=base_fs + 1.0, textColor=colors.HexColor("#1E293B"), leftIndent=0, rightIndent=0, firstLineIndent=0)
+            bullet_style = ParagraphStyle("CDCBullet", parent=styles["Normal"], fontName="Helvetica", fontSize=base_fs - 0.2, leading=base_fs + 1.0, textColor=colors.black, leftIndent=0, rightIndent=0, firstLineIndent=0)
+            cat_style = ParagraphStyle("CDCCategory", parent=styles["Normal"], fontName="Helvetica", fontSize=base_fs - 0.2, leading=base_fs + 1.1, textColor=colors.black, leftIndent=0, rightIndent=0, firstLineIndent=0)
 
             def make_banner(title_text):
                 p = Paragraph(f"<b>{title_text.upper()}</b>", sec_banner_style)
@@ -268,8 +351,8 @@ class ResumeTailorEngine:
                 t.setStyle(TableStyle([
                     ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#E6EFF8')),
                     ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#7FA2C7')),
-                    ('TOPPADDING', (0, 0), (-1, -1), 0.5),
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 0.5),
+                    ('TOPPADDING', (0, 0), (-1, -1), 0.4),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 0.4),
                     ('LEFTPADDING', (0, 0), (-1, -1), 0),
                     ('RIGHTPADDING', (0, 0), (-1, -1), 0),
                 ]))
@@ -284,13 +367,19 @@ class ResumeTailorEngine:
             story.append(Paragraph(f"<b>{name_line}</b>", title_style))
             if degree_line:
                 story.append(Paragraph(degree_line, sub_style))
-            story.append(Spacer(1, 1.2))
+            story.append(Spacer(1, 1.0))
 
             i = 2 if degree_line else 1
             current_section = ""
+            first_section = True
 
             while i < len(lines):
                 line = lines[i]
+
+                # Skip any Tech line as requested by user
+                if line.lower().startswith("tech:"):
+                    i += 1
+                    continue
 
                 # Check if Section Banner
                 is_banner = (
@@ -301,53 +390,48 @@ class ResumeTailorEngine:
                 if is_banner:
                     sec_name = line.lstrip("#* ").strip()
                     current_section = sec_name.upper()
+                    if not first_section:
+                        story.append(Spacer(1, 3.5)) # Clean spacing between sections
+                    first_section = False
                     story.append(make_banner(sec_name))
                     story.append(Spacer(1, 0.6))
                     i += 1
 
                     # If EDUCATION section, parse table
                     if "EDUCATION" in current_section:
+                        edu_lines_block = []
+                        while i < len(lines):
+                            edu_line = lines[i]
+                            if (edu_line.startswith("## ") or edu_line.startswith("# ") or
+                               (edu_line.isupper() and len(edu_line) < 45 and not edu_line.startswith("•") and not edu_line.startswith("-") and "|" not in edu_line and any(k in edu_line for k in ["INTERNSHIP", "PROJECT", "COMPETITION", "SKILL", "CERTIFICATION", "COURSEWORK", "POSITION", "EXTRA"]))):
+                                break
+                            edu_lines_block.append(edu_line)
+                            i += 1
+
+                        parsed_rows = ResumeTailorEngine.parse_education_rows(edu_lines_block)
                         edu_rows = [
                             [Paragraph("<b>Year</b>", cat_style), Paragraph("<b>Degree/Exam</b>", cat_style), Paragraph("<b>Institute</b>", cat_style), Paragraph("<b>CGPA/Marks</b>", cat_style)]
                         ]
-                        while i < len(lines):
-                            edu_line = lines[i]
-                            if edu_line.startswith("## ") or (edu_line.isupper() and len(edu_line) < 45 and not edu_line.startswith("•") and "|" not in edu_line and any(k in edu_line for k in ["INTERNSHIP", "PROJECT", "SKILL"])):
-                                break
-                            if "Year" in edu_line and "Degree" in edu_line:
-                                i += 1
-                                continue
-                            
-                            m = re.search(r'^(\d{4})\s+([A-Za-z0-9\.\(\)\s]+?)\s+(IIT\s+[A-Za-z]+|[A-Za-z\s\.\'\-]+?(?:School|College|Institute|University))\s+([0-9\.]+\s*(?:\/\s*10|%))', edu_line)
-                            if m:
-                                edu_rows.append([
-                                    Paragraph(m.group(1), cat_style),
-                                    Paragraph(m.group(2).strip(), cat_style),
-                                    Paragraph(m.group(3).strip(), cat_style),
-                                    Paragraph(m.group(4).strip(), cat_style)
-                                ])
-                            else:
-                                parts = edu_line.split()
-                                if len(parts) >= 4 and parts[0].isdigit():
-                                    edu_rows.append([
-                                        Paragraph(parts[0], cat_style),
-                                        Paragraph(" ".join(parts[1:3]), cat_style),
-                                        Paragraph(" ".join(parts[3:-2]) if len(parts) > 5 else parts[3], cat_style),
-                                        Paragraph(" ".join(parts[-2:]), cat_style)
-                                    ])
-                            i += 1
+                        for pr in parsed_rows:
+                            edu_rows.append([
+                                Paragraph(pr[0], cat_style),
+                                Paragraph(pr[1], cat_style),
+                                Paragraph(pr[2], cat_style),
+                                Paragraph(pr[3], cat_style)
+                            ])
 
                         if len(edu_rows) > 1:
-                            edu_table = Table(edu_rows, colWidths=[38, 140, 275, 110.27])
+                            edu_table = Table(edu_rows, colWidths=[42, 130, 275, page_width - (42 + 130 + 275)])
                             edu_table.setStyle(TableStyle([
                                 ('LINEBELOW', (0, 0), (-1, 0), 0.5, colors.HexColor('#94A3B8')),
+                                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
                                 ('TOPPADDING', (0, 0), (-1, -1), 0.2),
                                 ('BOTTOMPADDING', (0, 0), (-1, -1), 0.2),
-                                ('LEFTPADDING', (0, 0), (-1, -1), 1),
-                                ('RIGHTPADDING', (0, 0), (-1, -1), 1),
+                                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
                             ]))
                             story.append(edu_table)
-                            story.append(Spacer(1, 1.0))
+                            story.append(Spacer(1, 0.6))
                         continue
 
                     continue
@@ -363,38 +447,43 @@ class ResumeTailorEngine:
                         date_txt = f"[{date_match.group(1).strip()}]"
                         clean_title = line[:date_match.start()].strip().rstrip('| ')
 
+                    # Strip duplicate type suffixes
+                    for suf in ["| Self Project | Self Project", "| Self Project", "| Team | Team"]:
+                        if clean_title.endswith(suf):
+                            clean_title = clean_title[:-len(suf)].strip() + (" | Self Project" if "Self Project" in suf else " | Team")
+
                     t_row = Table([[
                         Paragraph(f"<b>{clean_title}</b>", item_title_left),
                         Paragraph(f"<b>{date_txt}</b>", item_title_right) if date_txt else Paragraph("", item_title_right)
-                    ]], colWidths=[428, 135.27])
-                    t_row.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('PADDING', (0,0), (-1,-1), 0)]))
+                    ]], colWidths=[page_width - 105, 105])
+                    t_row.setStyle(TableStyle([
+                        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                        ('TOPPADDING', (0, 0), (-1, -1), 0.5),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 0.5),
+                    ]))
                     story.append(t_row)
                     i += 1
                     continue
 
-                # Bullets
+                # Bullets - Flush with left margin (0 leftIndent)
                 if line.startswith(('•', '-', '*')):
                     clean_bullet = line.lstrip('•-* ').strip().replace('&', '&amp;')
                     story.append(Paragraph(f"• {clean_bullet}", bullet_style))
                     i += 1
                     continue
 
-                # Category Prefix Lines in Skills / Coursework
-                if any(line.startswith(p) for p in ["Programming", "Skills:", "Software", "Mathematics:", "Computer Science:", "MOOCs:"]):
-                    colon_idx = line.find(":")
-                    if colon_idx != -1:
-                        lbl = line[:colon_idx+1]
-                        val = line[colon_idx+1:].strip()
-                        story.append(Paragraph(f"<b>{lbl}</b> {val}", cat_style))
-                    else:
-                        story.append(Paragraph(line, cat_style))
+                # Category Prefix Lines in Skills / Coursework (Only label is bold, content is regular)
+                colon_idx = line.find(":")
+                if colon_idx != -1 and not line.startswith(('•', '-', '*')) and colon_idx < 45:
+                    lbl = line[:colon_idx+1]
+                    val = line[colon_idx+1:].strip()
+                    story.append(Paragraph(f"<b>{lbl}</b> {val}", cat_style))
                     i += 1
                     continue
 
-                # Tech line or 1-line overview
-                if line.lower().startswith("tech:"):
-                    story.append(Paragraph(f"<i>{line}</i>", tech_style))
-                elif len(line) > 15:
+                if len(line) > 15:
                     story.append(Paragraph(line, summary_style))
                 i += 1
 
@@ -403,11 +492,13 @@ class ResumeTailorEngine:
             reader = PdfReader(output_path)
             return len(reader.pages)
 
-        # Auto-fitting font size loop (from 10.8 down to 9.5 to guarantee exactly 1 page)
-        for candidate_fs in [10.8, 10.5, 10.0, 9.8, 9.5, 9.0]:
+        # Auto-fitting font size loop (from 10.0 down to 8.8 to guarantee exactly 1 page)
+        for candidate_fs in [10.0, 9.8, 9.5, 9.2, 9.0, 8.8]:
             pages = build_with_font_size(candidate_fs)
             if pages == 1:
                 break
+
+        return output_path
 
         return output_path
 
