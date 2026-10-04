@@ -114,10 +114,12 @@ def tailor_for_job(
         "college": profile.college or "IIT Kharagpur",
         "degree": profile.degree or "B.Tech in Engineering",
         "graduation_year": profile.graduation_year or 2028,
-        "cgpa": profile.cgpa or 8.39,
+        "cgpa": profile.cgpa or 8.0,
         "skills": profile.skills or [],
         "projects": profile.categorized_projects or profile.projects or [],
-        "experience": profile.experience or []
+        "experience": profile.experience or [],
+        "master_cv_markdown": profile.master_cv_markdown or "",
+        "raw_text": profile.master_cv_markdown or ""
     }
 
     # 1. Generate tailored 1-page ATS CV text
