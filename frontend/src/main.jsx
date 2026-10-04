@@ -14,6 +14,8 @@ import { ApplicationsTable } from "./components/ApplicationsTable";
 import { ProfileEditor } from "./components/ProfileEditor";
 import { InterviewPrepModal } from "./components/InterviewPrepModal";
 import { CustomJDModal } from "./components/CustomJDModal";
+import { MasterCVVault } from "./components/MasterCVVault";
+import { PortalJobDiscovery } from "./components/PortalJobDiscovery";
 
 import {
   Sparkles,
@@ -24,10 +26,13 @@ import {
   ExternalLink,
   ShieldCheck,
   Zap,
+  Globe,
+  FolderGit2,
+  Award,
 } from "lucide-react";
 
 function OpportunityOSApp() {
-  const [currentTab, setTab] = useState("dashboard");
+  const [currentTab, setTab] = useState("dashboard"); // "dashboard" | "master_cv" | "portal_discovery" | "applications" | "opportunities" | "pipeline" | "profile" | "interview"
   const [running, setRunning] = useState(false);
   const [metrics, setMetrics] = useState({});
   const [applications, setApplications] = useState([]);
@@ -46,7 +51,7 @@ function OpportunityOSApp() {
 
   const showToast = (msg) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(""), 4500);
+    setTimeout(() => setToastMessage(""), 5000);
   };
 
   const loadData = async () => {
@@ -67,7 +72,7 @@ function OpportunityOSApp() {
       }
       setTrackerEvents(eventsData);
     } catch (err) {
-      console.error("Failed to load initial platform data:", err);
+      console.error("Failed to load platform data:", err);
     }
   };
 
@@ -81,7 +86,7 @@ function OpportunityOSApp() {
       {
         timestamp: new Date().toLocaleTimeString(),
         stage: "Supervisor",
-        message: "🧠 Supervisor Agent awakened. Evaluating profile & setting autonomous search targets...",
+        message: "🧠 Supervisor Agent awakened. Evaluating multi-domain master CV & executing targeted portal searches...",
         level: "INFO",
       },
     ]);
@@ -99,9 +104,9 @@ function OpportunityOSApp() {
       const res = await api.runAgent(
         profileId,
         {
-          roles: profile?.preferred_roles || ["Robotics Intern", "Robotics Software Intern", "ML Intern"],
+          roles: profile?.preferred_roles || ["Software Development Engineer", "Machine Learning Engineer", "Robotics Software Intern"],
           locations: profile?.preferred_locations || ["India", "Bangalore", "Hyderabad", "Remote"],
-          skills: profile?.skills || ["Python", "C++", "ROS2", "Machine Learning"],
+          skills: profile?.skills || ["Python", "C++", "PyTorch", "FastAPI"],
           minimum_salary: profile?.minimum_salary || 40000,
           target_count: 15,
         },
@@ -114,11 +119,10 @@ function OpportunityOSApp() {
 
       await loadData();
 
-      // If application package is ready, prompt Human Approval modal!
       if (res.application_id) {
         const appDetails = await api.getApplication(res.application_id);
         setSelectedApp(appDetails);
-        showToast("Application Package Ready! Awaiting your Human-in-the-Loop approval.");
+        showToast("🎯 1-Page ATS CV & Application Package Ready! Awaiting your Human Approval.");
       }
     } catch (err) {
       console.error("Agent run error:", err);
@@ -153,12 +157,27 @@ function OpportunityOSApp() {
     }
   };
 
+  const handleTailorJobFromAnywhere = async (job) => {
+    try {
+      showToast(`Generating 1-Page ATS CV for ${job.title} at ${job.company}...`);
+      const res = await api.tailorForJob(job.id, profile?.id);
+      if (res.application_id) {
+        const appDetails = await api.getApplication(res.application_id);
+        setSelectedApp(appDetails);
+        await loadData();
+        showToast(`✓ ATS CV Ready for ${job.company}! Review and grant permission to apply.`);
+      }
+    } catch (err) {
+      alert(`Tailoring error: ${err.message}`);
+    }
+  };
+
   const handleApprove = async (appId, approvalPayload) => {
     try {
       const res = await api.approveApplication(appId, approvalPayload);
       setSelectedApp(null);
       await loadData();
-      showToast(`✓ Application approved & submitted! Reference: ${res.external_application_id}`);
+      showToast(`✓ Application approved & submitted! Reference: ${res.external_application_id || "APP-PORTAL-SUBMITTED"}`);
     } catch (err) {
       alert(`Approval error: ${err.message}`);
     }
@@ -169,7 +188,7 @@ function OpportunityOSApp() {
       await api.approveApplication(appId, { approve: false });
       setSelectedApp(null);
       await loadData();
-      showToast("Application rejected and archived.");
+      showToast("Application archived.");
     } catch (err) {
       alert(`Reject error: ${err.message}`);
     }
@@ -210,6 +229,7 @@ function OpportunityOSApp() {
 
   const awaitingCount = applications.filter((a) => a.status === "AWAITING_APPROVAL").length;
   const interviewEvents = trackerEvents.filter((e) => e.event_type === "INTERVIEW_INVITATION");
+  const projectsCount = (profile?.categorized_projects || profile?.projects || []).length;
 
   return (
     <div className="app-container">
@@ -245,6 +265,7 @@ function OpportunityOSApp() {
         setTab={setTab}
         awaitingCount={awaitingCount}
         interviewCount={interviewEvents.length}
+        projectsCount={projectsCount}
       />
 
       {/* Main Content */}
@@ -317,16 +338,38 @@ function OpportunityOSApp() {
           {currentTab === "dashboard" && (
             <div>
               {/* Header Hero */}
-              <div style={{ marginBottom: "24px" }}>
-                <p style={{ fontSize: "12px", fontWeight: "700", color: "var(--primary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                  Autonomous Agentic Job Application Platform
-                </p>
-                <h1 style={{ fontSize: "32px", fontWeight: "800", color: "var(--text-primary)", margin: "4px 0 8px" }}>
-                  Opportunity<span style={{ color: "var(--primary)" }}>OS</span> Engine
-                </h1>
-                <p style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
-                  Autonomously discovers opportunities, verifies eligibility, tailors your resume, prepares answers, pauses for your approval, and executes browser applications.
-                </p>
+              <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+                <div>
+                  <p style={{ fontSize: "12px", fontWeight: "700", color: "var(--primary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                    Autonomous Multi-Portal Discovery & ATS Tailoring Engine
+                  </p>
+                  <h1 style={{ fontSize: "30px", fontWeight: "800", color: "var(--text-primary)", margin: "4px 0 8px" }}>
+                    Opportunity<span style={{ color: "var(--primary)" }}>OS</span> Dashboard
+                  </h1>
+                  <p style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
+                    Upload your master CV with multi-domain projects, discover roles across LinkedIn, Wellfound & Indeed, generate 1-page ATS resumes, and review before applying.
+                  </p>
+                </div>
+
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => setTab("master_cv")}
+                    style={{ fontSize: "13px" }}
+                  >
+                    <FolderGit2 size={16} />
+                    <span>Master CV Vault ({projectsCount})</span>
+                  </button>
+
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => setTab("portal_discovery")}
+                    style={{ fontSize: "13px" }}
+                  >
+                    <Globe size={16} />
+                    <span>Live Portal Search</span>
+                  </button>
+                </div>
               </div>
 
               {/* Stats Overview */}
@@ -340,12 +383,13 @@ function OpportunityOSApp() {
                 <TopOpportunities
                   jobs={applications.length > 0 ? applications : jobs}
                   onOpenCustomJD={() => setIsCustomJDOpen(true)}
+                  onSelectJob={(job) => handleTailorJobFromAnywhere(job)}
                   onOpenReview={(job) => {
                     const matchedApp = applications.find((a) => a.job_id === job.id || a.title === job.title);
                     if (matchedApp) {
                       handleOpenApplication(matchedApp.id);
                     } else {
-                      handleRunAgent();
+                      handleTailorJobFromAnywhere(job);
                     }
                   }}
                 />
@@ -363,22 +407,28 @@ function OpportunityOSApp() {
             </div>
           )}
 
-          {/* TAB: PIPELINE */}
-          {currentTab === "pipeline" && (
-            <div>
-              <div style={{ marginBottom: "24px" }}>
-                <h2 style={{ fontSize: "24px", fontWeight: "800", color: "var(--text-primary)" }}>
-                  Agentic Multi-Agent Pipeline
-                </h2>
-                <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                  LangGraph workflow orchestration connecting the 9 specialized agents.
-                </p>
-              </div>
-              <AgentPipeline />
-              <div style={{ marginTop: "24px" }}>
-                <AgentActivityLog logs={logs} running={running} />
-              </div>
-            </div>
+          {/* TAB: MASTER CV & PROJECTS VAULT */}
+          {currentTab === "master_cv" && (
+            <MasterCVVault
+              profile={profile}
+              onProfileUpdated={(updated) => {
+                setProfile(updated);
+                loadData();
+              }}
+              onNavigateToSearch={() => setTab("portal_discovery")}
+            />
+          )}
+
+          {/* TAB: JOB DISCOVERY ENGINE (Merged job-search-agent) */}
+          {currentTab === "portal_discovery" && (
+            <PortalJobDiscovery
+              profile={profile}
+              onOpenReviewModal={(app) => {
+                setSelectedApp(app);
+                loadData();
+              }}
+              onTailorAndApply={(job) => handleTailorJobFromAnywhere(job)}
+            />
           )}
 
           {/* TAB: APPLICATIONS */}
@@ -389,7 +439,7 @@ function OpportunityOSApp() {
                   Applications & Review Center
                 </h2>
                 <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                  Review prepared packages, inspect tailored resumes, and authorize browser automation.
+                  Review prepared 1-page ATS resumes, inspect project match citations, and authorize browser automation.
                 </p>
               </div>
               <ApplicationsTable
@@ -399,26 +449,50 @@ function OpportunityOSApp() {
             </div>
           )}
 
-          {/* TAB: OPPORTUNITIES */}
+          {/* TAB: DISCOVERED JOBS */}
           {currentTab === "opportunities" && (
             <div>
-              <div style={{ marginBottom: "24px" }}>
-                <h2 style={{ fontSize: "24px", fontWeight: "800", color: "var(--text-primary)" }}>
-                  Discovered Opportunities Repository
-                </h2>
-                <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                  Raw and normalized job listings discovered across company career pages and job boards.
-                </p>
+              <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <h2 style={{ fontSize: "24px", fontWeight: "800", color: "var(--text-primary)" }}>
+                    Discovered Opportunities Repository
+                  </h2>
+                  <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                    All open positions discovered from LinkedIn, Wellfound, Indeed, and Glassdoor.
+                  </p>
+                </div>
+                <button className="btn btn-primary" onClick={() => setTab("portal_discovery")}>
+                  <Globe size={15} /> Search More Portals
+                </button>
               </div>
               <TopOpportunities
                 jobs={jobs}
                 onOpenCustomJD={() => setIsCustomJDOpen(true)}
-                onSelectJob={(job) => {
+                onSelectJob={(job) => handleTailorJobFromAnywhere(job)}
+                onOpenReview={(job) => {
                   const matched = applications.find((a) => a.job_id === job.id);
                   if (matched) handleOpenApplication(matched.id);
-                  else handleRunAgent();
+                  else handleTailorJobFromAnywhere(job);
                 }}
               />
+            </div>
+          )}
+
+          {/* TAB: PIPELINE */}
+          {currentTab === "pipeline" && (
+            <div>
+              <div style={{ marginBottom: "24px" }}>
+                <h2 style={{ fontSize: "24px", fontWeight: "800", color: "var(--text-primary)" }}>
+                  Multi-Agent Orchestration Pipeline
+                </h2>
+                <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                  LangGraph workflow orchestration connecting the 9 specialized agents.
+                </p>
+              </div>
+              <AgentPipeline />
+              <div style={{ marginTop: "24px" }}>
+                <AgentActivityLog logs={logs} running={running} />
+              </div>
             </div>
           )}
 
@@ -485,7 +559,7 @@ function OpportunityOSApp() {
         </div>
       </main>
 
-      {/* Human Review Modal */}
+      {/* Human Review & Permission Modal */}
       {selectedApp && (
         <ApplicationReviewModal
           application={selectedApp}
@@ -513,6 +587,9 @@ function OpportunityOSApp() {
         onJobCreated={async (result) => {
           await loadData();
           showToast(`Custom JD "${result.job?.title}" parsed & analyzed successfully!`);
+          if (result.job_id) {
+            handleTailorJobFromAnywhere({ id: result.job_id, title: result.job?.title, company: result.job?.company });
+          }
         }}
       />
     </div>

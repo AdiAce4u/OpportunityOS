@@ -13,7 +13,20 @@ class Job(Base):
     location: Mapped[str] = mapped_column(String(255), default="")
     is_remote: Mapped[bool] = mapped_column(Boolean, default=False)
     
+    # Portal search attributes
+    category: Mapped[str] = mapped_column(String(100), default="custom")
+    search_term: Mapped[str] = mapped_column(String(255), default="")
+    site: Mapped[str] = mapped_column(String(100), default="linkedin")
+    
+    # Match & Compensation
+    match_score: Mapped[float] = mapped_column(Float, default=0.0)
+    best_matching_project: Mapped[str] = mapped_column(String(255), default="")
+    best_project_domain: Mapped[str] = mapped_column(String(100), default="general")
+    matched_keywords: Mapped[list] = mapped_column(JSON, default=list)
+    
     salary_text: Mapped[str] = mapped_column(String(255), default="")
+    display_salary: Mapped[str] = mapped_column(String(255), default="Competitive")
+    normalized_salary: Mapped[float] = mapped_column(Float, default=0.0)
     salary_min: Mapped[float | None] = mapped_column(Float, nullable=True)
     salary_max: Mapped[float | None] = mapped_column(Float, nullable=True)
     
@@ -31,7 +44,7 @@ class Job(Base):
     url: Mapped[str] = mapped_column(String(1000), default="")
     application_method: Mapped[str] = mapped_column(String(100), default="form")
     required_documents: Mapped[list] = mapped_column(JSON, default=lambda: ["resume"])
-    source: Mapped[str] = mapped_column(String(100), default="career_page")
+    source: Mapped[str] = mapped_column(String(100), default="portal")
     
     company_research: Mapped[dict] = mapped_column(JSON, default=dict)
     raw_data: Mapped[dict] = mapped_column(JSON, default=dict)

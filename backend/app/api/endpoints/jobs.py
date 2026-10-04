@@ -1,17 +1,41 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+import uuid
+from typing import List, Optional
+from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models import Job, UserProfile
 from app.schemas.job import JobSchema, CustomJDAnalysisRequest
-from app.tools.search_tools import search_job_source
+from app.tools.portal_search_engine import search_live_portals, ROLE_CATEGORIES, CVProjectMatcher, CompensationParser
 from app.tools.extraction_tools import parse_custom_jd
 from app.tools.matching_tools import calculate_job_match, check_eligibility
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
+class PortalSearchRequest(BaseModel):
+    category: Optional[str] = "software"
+    query: Optional[str] = None
+    location: Optional[str] = "India"
+    results_wanted: Optional[int] = 15
+    sites: Optional[List[str]] = ["linkedin", "indeed", "glassdoor", "wellfound"]
+    is_remote: Optional[bool] = False
+    profile_id: Optional[int] = None
+
 @router.get("", response_model=list[JobSchema])
 def list_jobs(db: Session = Depends(get_db)):
-    return db.query(Job).all()
+    return db.query(Job).order_by(Job.match_score.desc(), Job.created_at.desc()).all()
+
+@router.get("/categories")
+def get_job_categories():
+    return {
+        "categories": {
+            "software": ["Software Development Engineer", "Backend Engineer", "Frontend Engineer", "Full Stack Developer", "DevOps Engineer"],
+            "data": ["Data Scientist", "Machine Learning Engineer", "AI Engineer", "Data Engineer", "Data Analyst"],
+            "consult": ["Management Consultant", "Strategy Analyst", "Business Analyst", "Technology Consulting Analyst"],
+            "finance": ["Quantitative Analyst", "Quantitative Researcher", "Financial Analyst", "Risk Analyst"],
+            "core": ["Robotics Software Engineer", "Embedded Software Engineer", "Hardware Engineer", "Mechanical Design Engineer"]
+        }
+    }
 
 @router.get("/{job_id}", response_model=JobSchema)
 def get_job(job_id: int, db: Session = Depends(get_db)):
@@ -20,17 +44,143 @@ def get_job(job_id: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "Job not found")
     return job
 
-@router.get("/search/preview")
-def preview_search(q: str = Query("robotics intern", description="Search query")):
-    return search_job_source(q)
+@router.post("/portal-search")
+def search_job_portals(request: PortalSearchRequest, db: Session = Depends(get_db)):
+    """
+    Executes multi-platform job discovery for the 5 requested tracks:
+    Software, Data, Consult, Finance, and Core.
+    """
+    profile = db.get(UserProfile, request.profile_id) if request.profile_id else db.query(UserProfile).first()
+    candidate_projects = (profile.categorized_projects or profile.projects or []) if profile else []
+
+    category = (request.category or "software").lower()
+    if category == "sde":
+        category = "software"
+
+    search_term = request.query
+    if not search_term or search_term.startswith("ALL_"):
+        cat_roles = ROLE_CATEGORIES.get(category, ["Software Development Engineer"])
+        search_term = cat_roles[0]
+
+    discovered_jobs = search_live_portals(
+        search_term=search_term,
+        location=request.location or "India",
+        category=category,
+        results_wanted=request.results_wanted or 15,
+        sites=request.sites,
+        is_remote=request.is_remote or False,
+        candidate_projects=candidate_projects
+    )
+
+    saved_jobs = []
+    for item in discovered_jobs:
+        ext_id = f"{item.get('site', 'web')}-{uuid.uuid5(uuid.NAMESPACE_DNS, item.get('title', '') + item.get('company', '') + item.get('location', '')).hex[:12]}"
+        
+        existing = db.query(Job).filter(Job.external_id == ext_id).first()
+        if not existing:
+            existing = db.query(Job).filter(Job.title == item.get("title"), Job.company == item.get("company")).first()
+
+        if existing:
+            existing.match_score = item.get("match_score", existing.match_score)
+            existing.best_matching_project = item.get("best_matching_project", existing.best_matching_project)
+            existing.best_project_domain = item.get("best_project_domain", existing.best_project_domain)
+            existing.matched_keywords = item.get("matched_keywords", existing.matched_keywords)
+            existing.display_salary = item.get("display_salary", existing.display_salary)
+            existing.category = category
+            saved_jobs.append(existing)
+        else:
+            new_job = Job(
+                external_id=ext_id,
+                title=item.get("title", search_term),
+                company=item.get("company", "Tech Company"),
+                location=item.get("location", request.location or "India"),
+                is_remote=item.get("is_remote", False),
+                category=category,
+                search_term=search_term,
+                site=item.get("site", "linkedin"),
+                match_score=item.get("match_score", 75.0),
+                best_matching_project=item.get("best_matching_project", "Featured Project"),
+                best_project_domain=item.get("best_project_domain", category),
+                matched_keywords=item.get("matched_keywords", []),
+                salary_text=item.get("display_salary", "Competitive"),
+                display_salary=item.get("display_salary", "Competitive"),
+                normalized_salary=item.get("normalized_salary", 0.0),
+                salary_min=item.get("min_amount"),
+                salary_max=item.get("max_amount"),
+                description=item.get("description", ""),
+                required_skills=item.get("matched_keywords") or ["Problem Solving", "System Design"],
+                preferred_skills=["Communication", "Leadership"],
+                education_requirements=["B.Tech", "Degree"],
+                eligibility={"graduation_year_min": 2026, "graduation_year_max": 2028},
+                url=item.get("job_url", ""),
+                application_method="portal",
+                source=f"portal_{item.get('site', 'linkedin')}",
+            )
+            db.add(new_job)
+            saved_jobs.append(new_job)
+
+    db.commit()
+
+    # Query all jobs matching this category to display complete openings
+    db_cat_jobs = db.query(Job).filter(
+        (Job.category == category) | (Job.category == ("sde" if category == "software" else category))
+    ).order_by(Job.match_score.desc()).all()
+
+    final_display = db_cat_jobs if db_cat_jobs else saved_jobs
+
+    return {
+        "status": "SUCCESS",
+        "search_term": search_term,
+        "category": category,
+        "location": request.location,
+        "total_discovered": len(final_display),
+        "jobs": [
+            {
+                "id": j.id,
+                "external_id": j.external_id,
+                "title": j.title,
+                "company": j.company,
+                "location": j.location,
+                "is_remote": j.is_remote,
+                "site": j.site,
+                "category": j.category,
+                "match_score": j.match_score,
+                "best_matching_project": j.best_matching_project,
+                "best_project_domain": j.best_project_domain,
+                "matched_keywords": j.matched_keywords,
+                "salary_text": j.salary_text,
+                "display_salary": j.display_salary,
+                "description": j.description,
+                "url": j.url,
+            }
+            for j in sorted(final_display, key=lambda x: x.match_score, reverse=True)
+        ]
+    }
+
+@router.post("/rescore")
+def rescore_database(profile_id: Optional[int] = None, db: Session = Depends(get_db)):
+    profile = db.get(UserProfile, profile_id) if profile_id else db.query(UserProfile).first()
+    if not profile:
+        raise HTTPException(404, "No profile found")
+    
+    projects = profile.categorized_projects or profile.projects or []
+    matcher = CVProjectMatcher(projects)
+    
+    all_jobs = db.query(Job).all()
+    count = 0
+    for j in all_jobs:
+        match_info = matcher.match_job_description(j.title or "", j.description or "")
+        j.match_score = match_info.get("match_score", 0.0)
+        j.best_matching_project = match_info.get("best_project", "Featured Project")
+        j.best_project_domain = match_info.get("best_project_domain", "general")
+        j.matched_keywords = match_info.get("matched_keywords", [])
+        count += 1
+        
+    db.commit()
+    return {"status": "SUCCESS", "rescored_jobs_count": count}
 
 @router.post("/analyze-custom-jd")
 def analyze_custom_jd(request: CustomJDAnalysisRequest, db: Session = Depends(get_db)):
-    """
-    On-Demand Custom JD Analyzer:
-    Parses arbitrary JD text, checks eligibility, and computes 1-to-1 evidence citations
-    against the candidate profile without running a web search.
-    """
     if not request.jd_text.strip():
         raise HTTPException(400, "Job description text cannot be empty.")
         
@@ -46,7 +196,7 @@ def analyze_custom_jd(request: CustomJDAnalysisRequest, db: Session = Depends(ge
         "degree": profile.degree,
         "college": profile.college,
         "skills": profile.skills or [],
-        "projects": profile.projects or [],
+        "projects": profile.categorized_projects or profile.projects or [],
         "experience": profile.experience or [],
         "preferred_locations": profile.preferred_locations or [],
         "minimum_salary": profile.minimum_salary,
@@ -54,14 +204,9 @@ def analyze_custom_jd(request: CustomJDAnalysisRequest, db: Session = Depends(ge
     }
 
     parsed_job = parse_custom_jd(request.jd_text, request.title, request.company)
-    
-    # Run eligibility check
     is_eligible, eligibility_reason = check_eligibility(parsed_job, profile_dict)
-    
-    # Run matching & evidence-based citation table
     match_result = calculate_job_match(parsed_job, profile_dict)
     
-    # Save or update parsed job with duplicate prevention
     existing_job = db.query(Job).filter(Job.external_id == parsed_job["external_id"]).first()
     if existing_job:
         new_job = existing_job
@@ -82,6 +227,7 @@ def analyze_custom_jd(request: CustomJDAnalysisRequest, db: Session = Depends(ge
             url=parsed_job["url"],
             application_method=parsed_job["application_method"],
             source="custom_jd_input",
+            match_score=match_result["overall_score"]
         )
         db.add(new_job)
         db.commit()
@@ -98,4 +244,3 @@ def analyze_custom_jd(request: CustomJDAnalysisRequest, db: Session = Depends(ge
         "why_this_job": match_result["why_this_job"],
         "evidence_table": match_result["evidence_table"]
     }
-

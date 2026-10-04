@@ -1,36 +1,44 @@
-from typing import Any
+from typing import Any, List, Optional
 from pydantic import BaseModel, Field
 
 class JobSchema(BaseModel):
-    id: int | None = None
+    id: Optional[int] = None
     external_id: str
     title: str
     company: str
     location: str = ""
     is_remote: bool = False
+    category: str = "custom"
+    search_term: str = ""
+    site: str = "linkedin"
+    match_score: float = 0.0
+    best_matching_project: str = ""
+    best_project_domain: str = "general"
+    matched_keywords: List[str] = Field(default_factory=list)
     salary_text: str = ""
-    salary_min: float | None = None
-    salary_max: float | None = None
+    display_salary: str = ""
+    normalized_salary: float = 0.0
+    salary_min: Optional[float] = None
+    salary_max: Optional[float] = None
     description: str = ""
-    required_skills: list[str] = Field(default_factory=list)
-    preferred_skills: list[str] = Field(default_factory=list)
+    required_skills: List[str] = Field(default_factory=list)
+    preferred_skills: List[str] = Field(default_factory=list)
     eligibility: dict[str, Any] = Field(default_factory=dict)
     deadline: str = ""
     url: str = ""
-    application_method: str = "form"
-    required_documents: list[str] = Field(default_factory=list)
-    source: str = "career_page"
+    application_method: str = "portal"
+    required_documents: List[str] = Field(default_factory=list)
+    source: str = "portal"
     company_research: dict[str, Any] = Field(default_factory=dict)
 
 class JobSearchQuery(BaseModel):
     query: str
-    location: str | None = None
-    roles: list[str] = Field(default_factory=list)
-    min_salary: float | None = None
+    location: Optional[str] = None
+    roles: List[str] = Field(default_factory=list)
+    min_salary: Optional[float] = None
 
 class CustomJDAnalysisRequest(BaseModel):
     jd_text: str
     title: str = ""
     company: str = ""
-    profile_id: int | None = None
-
+    profile_id: Optional[int] = None

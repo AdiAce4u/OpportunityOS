@@ -16,22 +16,45 @@ export async function fetchJson(url, options = {}) {
 }
 
 export const api = {
-  // Profiles
+  // Profiles & Master CV
   getProfiles: () => fetchJson("/profiles"),
   getProfile: (id) => fetchJson(`/profiles/${id}`),
   createProfile: (data) => fetchJson("/profiles", { method: "POST", body: JSON.stringify(data) }),
   updateProfile: (id, data) => fetchJson(`/profiles/${id}`, { method: "PUT", body: JSON.stringify(data) }),
-  uploadResume: async (file, profileId = null) => {
+  getProfileProjects: (profileId) => fetchJson(`/profiles/${profileId}/projects`),
+  
+  uploadMasterCV: async (file, profileId = null) => {
     const formData = new FormData();
     formData.append("file", file);
-    const url = profileId ? `${API_BASE}/profiles/upload-resume?profile_id=${profileId}` : `${API_BASE}/profiles/upload-resume`;
+    const url = profileId
+      ? `${API_BASE}/profiles/upload-master-cv?profile_id=${profileId}`
+      : `${API_BASE}/profiles/upload-master-cv`;
     const res = await fetch(url, {
       method: "POST",
       body: formData,
     });
-    if (!res.ok) throw new Error("Resume upload failed");
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Master CV upload failed: ${err}`);
+    }
     return res.json();
   },
+
+  uploadResume: async (file, profileId = null) => {
+    return api.uploadMasterCV(file, profileId);
+  },
+
+  // Real-Time Portal Search (LinkedIn, Wellfound, Indeed, Glassdoor)
+  getJobCategories: () => fetchJson("/jobs/categories"),
+  searchJobPortals: (searchParams) =>
+    fetchJson("/jobs/portal-search", {
+      method: "POST",
+      body: JSON.stringify(searchParams),
+    }),
+  rescoreJobs: (profileId = null) =>
+    fetchJson(`/jobs/rescore${profileId ? `?profile_id=${profileId}` : ""}`, {
+      method: "POST",
+    }),
 
   // Jobs
   getJobs: () => fetchJson("/jobs"),
@@ -48,9 +71,13 @@ export const api = {
       }),
     }),
 
-  // Applications
+  // Applications & JD-Tailored ATS CV
   getApplications: () => fetchJson("/applications"),
   getApplication: (id) => fetchJson(`/applications/${id}`),
+  tailorForJob: (jobId, profileId = null) =>
+    fetchJson(`/applications/tailor-for-job/${jobId}${profileId ? `?profile_id=${profileId}` : ""}`, {
+      method: "POST",
+    }),
   preparePortalPrefill: (id) =>
     fetchJson(`/applications/${id}/prepare-portal`, { method: "POST" }),
   approveApplication: (id, approvalData) =>
@@ -63,6 +90,8 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ answers }),
     }),
+  getResumePdfUrl: (applicationId) =>
+    `${API_BASE}/applications/${applicationId}/resume-pdf`,
 
   // Autonomous Agent
   runAgent: (profileId, goal, freeFormGoal = null) =>

@@ -1,15 +1,20 @@
+import os
 from functools import lru_cache
-from pydantic_settings import BaseSettings, SettingsConfigDict
+try:
+    from pydantic_settings import BaseSettings, SettingsConfigDict
+except ImportError:
+    from pydantic import BaseModel as BaseSettings
+    SettingsConfigDict = dict
 
 class Settings(BaseSettings):
     app_name: str = "OpportunityOS"
     version: str = "1.0.0"
-    database_url: str = "sqlite:///./opportunityos.db"
+    database_url: str = os.getenv("DATABASE_URL", "sqlite:///./opportunityos.db")
     
     # LLM Abstraction Layer
-    llm_provider: str = "mock"  # "mock" | "gemini" | "openai" | "anthropic"
-    llm_api_key: str = ""
-    llm_model: str = "gemini-1.5-flash"
+    llm_provider: str = os.getenv("LLM_PROVIDER", "mock")
+    llm_api_key: str = os.getenv("LLM_API_KEY", "")
+    llm_model: str = os.getenv("LLM_MODEL", "gemini-1.5-flash")
     
     # Autonomous Agent Settings
     target_jobs_count: int = 15
@@ -24,8 +29,6 @@ class Settings(BaseSettings):
     # App URLs
     app_host: str = "http://localhost:8000"
     frontend_url: str = "http://localhost:5173"
-    
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 @lru_cache
 def get_settings() -> Settings:

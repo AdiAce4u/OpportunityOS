@@ -16,6 +16,7 @@ class UserProfile(Base):
     cgpa: Mapped[float | None] = mapped_column(Float, nullable=True)
     skills: Mapped[list] = mapped_column(JSON, default=list)
     projects: Mapped[list] = mapped_column(JSON, default=list)
+    categorized_projects: Mapped[list] = mapped_column(JSON, default=list)
     experience: Mapped[list] = mapped_column(JSON, default=list)
     
     # Target Search Criteria & Preferences
@@ -27,7 +28,8 @@ class UserProfile(Base):
     prefer_companies: Mapped[list] = mapped_column(JSON, default=list)
     avoid_companies: Mapped[list] = mapped_column(JSON, default=list)
     
-    # Resume artifacts
+    # Resume & Master CV artifacts
+    master_cv_markdown: Mapped[str] = mapped_column(Text, default="")
     resume_filename: Mapped[str] = mapped_column(String(255), default="")
     resume_text: Mapped[str] = mapped_column(Text, default="")
     parsed_data: Mapped[dict] = mapped_column(JSON, default=dict)

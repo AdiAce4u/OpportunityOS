@@ -1,342 +1,213 @@
-from app.models import UserProfile, Job, Application, FollowUpEvent
+import os
+import sqlite3
+import uuid
 from datetime import datetime, timedelta
+from app.models import UserProfile, Job, Application, FollowUpEvent
+from app.tools.cv_parser_engine import MasterCVParser
+from app.tools.portal_search_engine import ROLE_CATEGORIES, CVProjectMatcher, CompensationParser
 
-SAMPLE_JOBS = [
-    {
-        "external_id": "xyz-robotics-001",
-        "title": "Robotics Software Intern",
-        "company": "XYZ Robotics",
-        "location": "Bangalore",
-        "is_remote": False,
-        "salary_text": "₹50,000/month",
-        "salary_min": 50000.0,
-        "salary_max": 50000.0,
-        "description": "Develop autonomous mobile robot navigation, ROS2 sensor drivers, state estimation, and path planning in Python and C++.",
-        "required_skills": ["Python", "C++", "ROS2", "Robotics", "Linux"],
-        "preferred_skills": ["Navigation2", "Gazebo", "SLAM", "Docker"],
-        "education_requirements": ["B.Tech", "M.Tech"],
-        "graduation_requirements": {"min_year": 2026, "max_year": 2028},
-        "experience_requirements": "0-1 years / Student",
-        "eligibility": {"graduation_year_min": 2026, "graduation_year_max": 2028, "degree": ["B.Tech", "M.Tech", "Dual Degree"]},
-        "deadline": "2026-11-15",
-        "url": "http://localhost:8000/portal/apply/xyz-robotics-001",
-        "application_method": "form",
-        "required_documents": ["resume", "cover_letter"],
-        "source": "company_careers",
-        "company_research": {
-            "summary": "XYZ Robotics builds next-gen autonomous warehouse robots and industrial AMRs with cutting-edge LiDAR SLAM.",
-            "domain": "Robotics & Autonomous Logistics",
-            "size": "50-150 employees",
-            "technology": ["ROS2", "C++20", "Python", "NVIDIA Isaac Sim", "TensorRT"],
-            "recent_news": ["Secured $12M Series A funding for warehouse fleet expansion across Southeast Asia."],
-            "reputation_notes": ["Known for high engineering bar and rapid robotics prototyping culture."]
-        }
-    },
-    {
-        "external_id": "abc-ai-002",
-        "title": "Machine Learning Intern",
-        "company": "ABC AI",
-        "location": "Remote",
-        "is_remote": True,
-        "salary_text": "₹45,000/month",
-        "salary_min": 45000.0,
-        "salary_max": 45000.0,
-        "description": "Train and evaluate deep learning vision models, build feature extraction pipelines with PyTorch, and deploy real-time inference services.",
-        "required_skills": ["Python", "Machine Learning", "PyTorch", "Data Science"],
-        "preferred_skills": ["Computer Vision", "FastAPI", "ONNX", "Docker"],
-        "education_requirements": ["B.Tech", "M.Tech", "MS"],
-        "graduation_requirements": {"min_year": 2026, "max_year": 2028},
-        "experience_requirements": "0-1 years",
-        "eligibility": {"graduation_year_min": 2026, "graduation_year_max": 2028},
-        "deadline": "2026-10-31",
-        "url": "http://localhost:8000/portal/apply/abc-ai-002",
-        "application_method": "form",
-        "required_documents": ["resume"],
-        "source": "job_board",
-        "company_research": {
-            "summary": "ABC AI is an applied machine intelligence research lab developing vision and multimodal agents.",
-            "domain": "Applied Artificial Intelligence",
-            "size": "100-250 employees",
-            "technology": ["PyTorch", "Python", "Transformers", "Kubernetes"],
-            "recent_news": ["Published state-of-the-art vision benchmark at CVPR."],
-            "reputation_notes": ["Strong remote-first research culture with mentorship from FAANG alumni."]
-        }
-    },
-    {
-        "external_id": "def-auto-003",
-        "title": "Autonomous Systems Intern",
-        "company": "DEF Autonomy",
-        "location": "Hyderabad",
-        "is_remote": False,
-        "salary_text": "₹55,000/month",
-        "salary_min": 55000.0,
-        "salary_max": 60000.0,
-        "description": "Perception, sensor fusion (camera, LiDAR, radar), Kalman filters, and controls for autonomous navigation systems.",
-        "required_skills": ["ROS2", "C++", "Python", "Controls", "Robotics"],
-        "preferred_skills": ["EKF", "C++17", "Point Cloud Library", "CAN Bus"],
-        "education_requirements": ["B.Tech", "M.Tech"],
-        "graduation_requirements": {"min_year": 2026, "max_year": 2028},
-        "experience_requirements": "0-2 years",
-        "eligibility": {"graduation_year_min": 2026, "graduation_year_max": 2028},
-        "deadline": "2026-11-20",
-        "url": "http://localhost:8000/portal/apply/def-auto-003",
-        "application_method": "form",
-        "required_documents": ["resume", "cover_letter"],
-        "source": "company_careers",
-        "company_research": {
-            "summary": "DEF Autonomy designs self-driving mining haulers and autonomous off-road heavy machinery.",
-            "domain": "Autonomous Vehicles & Industrial Automation",
-            "size": "200-500 employees",
-            "technology": ["ROS2", "Modern C++", "Simulink", "Linux Real-Time"],
-            "recent_news": ["Deployed first fully driverless fleet at a major open-pit site."],
-            "reputation_notes": ["High safety rigor, exceptional hardware-in-the-loop facilities."]
-        }
-    },
-    {
-        "external_id": "neural-drive-004",
-        "title": "Robot Perception Intern",
-        "company": "NeuralDrive Labs",
-        "location": "Bangalore",
-        "is_remote": False,
-        "salary_text": "₹60,000/month",
-        "salary_min": 60000.0,
-        "salary_max": 65000.0,
-        "description": "Build real-time 3D object detection, semantic segmentation, and tracking pipelines for humanoid robotic arms and quadrupeds.",
-        "required_skills": ["Python", "C++", "Computer Vision", "Machine Learning", "ROS2"],
-        "preferred_skills": ["CUDA", "TensorRT", "RealSense", "Isaac Gym"],
-        "education_requirements": ["B.Tech", "M.Tech"],
-        "graduation_requirements": {"min_year": 2026, "max_year": 2028},
-        "experience_requirements": "Student / 0-1 years",
-        "eligibility": {"graduation_year_min": 2026, "graduation_year_max": 2028},
-        "deadline": "2026-12-01",
-        "url": "http://localhost:8000/portal/apply/neural-drive-004",
-        "application_method": "form",
-        "required_documents": ["resume", "cover_letter"],
-        "source": "github_careers",
-        "company_research": {
-            "summary": "NeuralDrive Labs builds generalist robotic dexterity algorithms and bipedal humanoid platforms.",
-            "domain": "Embodied AI & Humanoid Robotics",
-            "size": "30-80 employees",
-            "technology": ["PyTorch", "ROS2 Humble", "NVIDIA Jetson", "C++20"],
-            "recent_news": ["Demonstrated whole-body teleoperation via VR headset."],
-            "reputation_notes": ["Fast-paced venture-backed startup with generous equity and compute."]
-        }
-    },
-    {
-        "external_id": "apex-robotics-005",
-        "title": "Embedded Robotics Firmware Intern",
-        "company": "Apex Robotics",
-        "location": "Pune",
-        "is_remote": False,
-        "salary_text": "₹42,000/month",
-        "salary_min": 42000.0,
-        "salary_max": 45000.0,
-        "description": "Microcontroller programming, motor control (BLDC/FOC), CAN/UART interfaces, and FreeRTOS integration with ROS2 micro-XRCE.",
-        "required_skills": ["C++", "Python", "Embedded Systems", "Robotics"],
-        "preferred_skills": ["STM32", "FreeRTOS", "micro-ROS", "Altium"],
-        "education_requirements": ["B.Tech"],
-        "graduation_requirements": {"min_year": 2026, "max_year": 2028},
-        "experience_requirements": "0-1 years",
-        "eligibility": {"graduation_year_min": 2026, "graduation_year_max": 2028},
-        "deadline": "2026-11-10",
-        "url": "http://localhost:8000/portal/apply/apex-robotics-005",
-        "application_method": "form",
-        "required_documents": ["resume"],
-        "source": "company_careers",
-        "company_research": {
-            "summary": "Apex Robotics manufactures drone avionics and precision agricultural spraying rovers.",
-            "domain": "AgriTech & Drones",
-            "size": "80-150 employees",
-            "technology": ["STM32", "C++", "Python", "ROS2", "KiCad"],
-            "recent_news": ["Granted DGCA type certification for high-payload commercial drone."],
-            "reputation_notes": ["Hands-on hardware lab with rigorous testing fields."]
-        }
-    },
-    {
-        "external_id": "ineligible-senior-006",
-        "title": "Principal Robotics Architect",
-        "company": "Titan Robotics",
-        "location": "Bangalore",
-        "is_remote": False,
-        "salary_text": "₹2,50,000/month",
-        "salary_min": 250000.0,
-        "salary_max": 300000.0,
-        "description": "10+ years leading production robotics architecture, ROS safety certifications, and commercial fleet deployments.",
-        "required_skills": ["ROS2", "C++", "System Architecture", "Safety Critical Systems"],
-        "preferred_skills": ["ISO 26262", "Autosar"],
-        "education_requirements": ["M.Tech", "Ph.D"],
-        "graduation_requirements": {"min_year": 2010, "max_year": 2018},
-        "experience_requirements": "8+ years",
-        "eligibility": {"graduation_year_min": 2010, "graduation_year_max": 2018, "required_min_years_experience": 8},
-        "deadline": "2026-10-15",
-        "url": "http://localhost:8000/portal/apply/ineligible-senior-006",
-        "application_method": "form",
-        "required_documents": ["resume"],
-        "source": "job_board",
-        "company_research": {"summary": "Titan Robotics is a defense industrial contractor.", "domain": "Defense Robotics"}
-    }
-]
+def sync_agent_db_jobs(db, projects):
+    """Imports all jobs from job-search-agent/jobs_database.db and seeds Consult track."""
+    matcher = CVProjectMatcher(projects)
+    agent_db_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "job-search-agent", "jobs_database.db")
+    
+    imported_count = 0
+    if os.path.exists(agent_db_path):
+        try:
+            conn = sqlite3.connect(agent_db_path)
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM jobs")
+            rows = cur.fetchall()
+            for r in rows:
+                d = dict(r)
+                title = d.get("title") or "Software Role"
+                company = d.get("company") or "Technology Co"
+                cat_raw = d.get("category") or "sde"
+                cat = "software" if cat_raw in ["sde", "software"] else cat_raw
+                ext_id = d.get("id") or f"{d.get('site', 'portal')}-{uuid.uuid5(uuid.NAMESPACE_DNS, title + company).hex[:10]}"
+
+                existing = db.query(Job).filter((Job.external_id == ext_id) | ((Job.title == title) & (Job.company == company))).first()
+                if not existing:
+                    match_info = matcher.match_job_description(title, d.get("description") or "")
+                    comp_info = CompensationParser.parse_compensation(d)
+                    
+                    job = Job(
+                        external_id=ext_id,
+                        title=title,
+                        company=company,
+                        location=d.get("location") or "India",
+                        is_remote=bool(d.get("is_remote")),
+                        category=cat,
+                        search_term=d.get("search_term") or title,
+                        site=d.get("site") or "linkedin",
+                        match_score=match_info.get("match_score", 82.0),
+                        best_matching_project=match_info.get("best_project", "Featured Project"),
+                        best_project_domain=match_info.get("best_project_domain", cat),
+                        matched_keywords=match_info.get("matched_keywords", []),
+                        salary_text=comp_info.get("display_salary", "Competitive"),
+                        display_salary=comp_info.get("display_salary", "Competitive"),
+                        normalized_salary=comp_info.get("normalized_yearly_salary", 0.0),
+                        description=d.get("description") or f"{title} at {company}",
+                        required_skills=match_info.get("matched_keywords") or ["System Design", "Problem Solving"],
+                        preferred_skills=["Communication", "Docker"],
+                        education_requirements=["B.Tech", "Degree"],
+                        url=d.get("job_url") or "",
+                        source="job_search_agent_db"
+                    )
+                    db.add(job)
+                    imported_count += 1
+            conn.close()
+            db.commit()
+        except Exception as e:
+            pass
+
+    # Ensure rich Consult track openings exist
+    consult_openings = [
+        ("McKinsey & Company", "Business Analyst / Management Consultant", "₹22.0 - 30.0 LPA", "Gurugram", "https://www.mckinsey.com/careers"),
+        ("Boston Consulting Group (BCG)", "Strategy Consulting Analyst - Technology & Ops", "₹24.0 - 32.0 LPA", "Mumbai", "https://careers.bcg.com"),
+        ("Bain & Company", "Associate Consultant - Digital Transformation", "₹22.0 - 28.0 LPA", "Bangalore", "https://www.bain.com/careers"),
+        ("Dalberg Advisors", "Strategy & Development Consultant", "₹16.0 - 22.0 LPA", "New Delhi", "https://dalberg.com/careers"),
+        ("Deloitte Strategy & AI", "Technology Strategy Consulting Analyst", "₹14.0 - 20.0 LPA", "Hyderabad", "https://jobs2.deloitte.com"),
+        ("Kearney", "Operations & Supply Chain Consulting Associate", "₹20.0 - 28.0 LPA", "Mumbai", "https://www.kearney.com/careers"),
+        ("PwC Advisory", "Business Transformation & Strategy Consultant", "₹15.0 - 22.0 LPA", "Bangalore", "https://pwc.com/careers")
+    ]
+    for comp, title, sal, loc, url in consult_openings:
+        ext_id = f"consult-{uuid.uuid5(uuid.NAMESPACE_DNS, title + comp).hex[:10]}"
+        existing = db.query(Job).filter((Job.external_id == ext_id) | ((Job.title == title) & (Job.company == comp))).first()
+        if not existing:
+            match_info = matcher.match_job_description(title, "Consulting, business intelligence, strategy, operations")
+            job = Job(
+                external_id=ext_id,
+                title=title,
+                company=comp,
+                location=loc,
+                category="consult",
+                search_term="Management Consultant",
+                site="linkedin",
+                match_score=match_info.get("match_score", 85.0),
+                best_matching_project=match_info.get("best_project", "Predictive Income Modelling / BI Analysis"),
+                best_project_domain="consult",
+                matched_keywords=match_info.get("matched_keywords", ["Strategy", "Analytics"]),
+                salary_text=sal,
+                display_salary=sal,
+                description=f"Strategic consulting role at {comp}. Driving digital transformation, market strategy, and operational improvements for enterprise clients.",
+                required_skills=["Strategic Thinking", "Data Analysis", "Python", "Presentation"],
+                url=url,
+                source="portal_linkedin"
+            )
+            db.add(job)
+    db.commit()
 
 def seed_database(db):
-    # Ensure default user profile exists
+    """Initializes OpportunityOS database with Master CV projects, 5 tracks of jobs, and sample application."""
     profile = db.query(UserProfile).first()
+    
+    master_cv_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "job-search-agent", "uploaded_master_cv.md")
+    master_text = ""
+    if os.path.exists(master_cv_path):
+        with open(master_cv_path, "r", encoding="utf-8", errors="ignore") as f:
+            master_text = f.read()
+
+    parsed_cv = MasterCVParser.parse_full_master_cv(master_text) if master_text else None
+
     if not profile:
         profile = UserProfile(
-            name="Aarav Sharma",
-            email="aarav.sharma@example.com",
-            phone="+91 9876543210",
-            graduation_year=2027,
-            degree="B.Tech in Computer Science & Robotics",
-            college="IIT Kharagpur",
-            cgpa=8.92,
-            skills=["Python", "C++", "ROS2", "Machine Learning", "Robotics", "Controls", "Linux", "PyTorch"],
-            projects=[
+            name=parsed_cv.get("name") if parsed_cv else "Vaibhav Anand",
+            email=parsed_cv.get("email") if parsed_cv else "vaibhav.anand@example.com",
+            phone=parsed_cv.get("phone") if parsed_cv else "+91 9876543210",
+            graduation_year=parsed_cv.get("graduation_year") if parsed_cv else 2028,
+            degree=parsed_cv.get("degree") if parsed_cv else "B.Tech in Mechanical Engineering",
+            college=parsed_cv.get("college") if parsed_cv else "IIT Kharagpur",
+            cgpa=parsed_cv.get("cgpa") if parsed_cv else 8.39,
+            skills=parsed_cv.get("skills") if parsed_cv else [
+                "Python", "C++", "PyTorch", "ROS2", "Machine Learning", "FastAPI",
+                "Deep Learning", "Docker", "Node.js", "SolidWorks", "Computer Vision"
+            ],
+            projects=parsed_cv.get("projects") if parsed_cv else [],
+            categorized_projects=parsed_cv.get("projects") if parsed_cv else [],
+            experience=parsed_cv.get("experience") if parsed_cv else [
                 {
-                    "name": "Quadruped Robot Dynamic Locomotion",
-                    "description": "Designed a 12-DOF quadruped robot using ROS2 Humble, Gazebo simulation, and model-predictive controls for dynamic gait stabilization.",
-                    "tech_stack": ["ROS2", "C++", "Python", "Gazebo", "Controls"],
-                    "link": "https://github.com/aarav-sharma/quadruped-ros2"
-                },
-                {
-                    "name": "Autonomous Navigation with LiDAR SLAM",
-                    "description": "Implemented 2D/3D Cartographer SLAM and Nav2 stack with obstacle costmaps on an Ackerman-steered autonomous testbed.",
-                    "tech_stack": ["ROS2", "C++", "SLAM", "Navigation2"],
-                    "link": "https://github.com/aarav-sharma/nav2-cartographer"
-                },
-                {
-                    "name": "Deep Learning Vision for Robotic Grasping",
-                    "description": "Trained YOLOv8 and GG-CNN grasping models with PyTorch to detect 6-DOF grasp poses for industrial robot arm pick-and-place.",
-                    "tech_stack": ["Python", "PyTorch", "Computer Vision", "Machine Learning"],
-                    "link": "https://github.com/aarav-sharma/robot-grasp-vision"
+                    "role": "Research Intern",
+                    "company": "Carnegie Mellon University",
+                    "duration": "Nov 2025 - Mar 2026",
+                    "description": "Developed gradient-derived LLM watermarking and antidistillation framework."
                 }
             ],
-            experience=[
-                {
-                    "role": "Robotics Research Assistant",
-                    "company": "Centre for Robotics, IIT Kharagpur",
-                    "duration": "May 2025 - Present",
-                    "description": "Developed low-latency ROS2 communication nodes and sensor drivers for IMU and LiDAR."
-                }
+            preferred_roles=[
+                "Software Development Engineer",
+                "Machine Learning Engineer",
+                "Robotics Software Engineer",
+                "Data Scientist",
+                "Quantitative Analyst",
+                "Management Consultant"
             ],
-            preferred_roles=["Robotics Intern", "Robotics Software Intern", "ML Intern", "Autonomous Systems Intern"],
-            preferred_locations=["India", "Bangalore", "Hyderabad", "Remote"],
+            preferred_locations=["India", "Bangalore", "Hyderabad", "Remote", "Gurugram", "Mumbai"],
             remote_preference=True,
-            minimum_salary=40000.0,
-            work_authorization="Citizen of India, fully authorized to work in India",
-            prefer_companies=["XYZ Robotics", "NeuralDrive Labs", "ABC AI"],
-            avoid_companies=["Unregulated Crypto Corp"],
-            resume_filename="Aarav_Sharma_Resume.pdf",
-            resume_text="""AARAV SHARMA
-Email: aarav.sharma@example.com | Phone: +91 9876543210 | Bangalore / Kharagpur, India
-LinkedIn: linkedin.com/in/aarav-sharma | GitHub: github.com/aarav-sharma
-
-EDUCATION
-Indian Institute of Technology (IIT) Kharagpur
-B.Tech in Computer Science & Robotics | CGPA: 8.92/10.0 | Expected Graduation: 2027
-
-TECHNICAL SKILLS
-Languages: Python, C++ (C++17/20), Bash, SQL
-Robotics & Control: ROS2 (Humble/Iron), Nav2, Gazebo, SLAM, PID/MPC Control, Micro-ROS
-AI / Machine Learning: PyTorch, OpenCV, Scikit-Learn, NumPy, TensorRT, Computer Vision
-Tools & Systems: Linux/Ubuntu, Git, Docker, CMake, RealSense, LiDAR
-
-PROJECTS
-- Quadruped Robot Dynamic Locomotion: Implemented 12-DOF quadruped gait planning with ROS2 and Gazebo physics.
-- Autonomous Navigation with Cartographer SLAM: Deployed Nav2 stack with LiDAR-inertial odometry.
-- Deep Learning Vision for Robotic Grasping: 6-DOF robotic grasp pose estimation using PyTorch and OpenCV.
-
-WORK EXPERIENCE
-Robotics Research Assistant | Centre for Robotics, IIT Kharagpur | May 2025 - Present
-- Engineered high-throughput ROS2 messaging pipelines reducing latency by 35%.
-"""
+            minimum_salary=45000.0,
+            work_authorization="Eligible to work in India",
+            prefer_companies=["NVIDIA", "Uber", "McKinsey", "Razorpay", "XYZ Robotics", "Tower Research"],
+            avoid_companies=[],
+            resume_filename="Vaibhav_Anand_Master_CV.md",
+            master_cv_markdown=master_text or "Master CV loaded."
         )
         db.add(profile)
         db.commit()
         db.refresh(profile)
+    elif parsed_cv and not profile.categorized_projects:
+        profile.projects = parsed_cv.get("projects", [])
+        profile.categorized_projects = parsed_cv.get("projects", [])
+        profile.skills = list(set((profile.skills or []) + (parsed_cv.get("skills") or [])))
+        profile.master_cv_markdown = master_text
+        db.commit()
 
-    # Seed sample jobs
-    for job_data in SAMPLE_JOBS:
-        existing = db.query(Job).filter(Job.external_id == job_data["external_id"]).first()
-        if not existing:
-            job = Job(**job_data)
-            db.add(job)
-    db.commit()
+    # Sync all jobs from job-search-agent/jobs_database.db
+    sync_agent_db_jobs(db, profile.categorized_projects or profile.projects or [])
 
-    # Seed sample applications if none exist
+    # Seed an application ready for review if none exist
     if db.query(Application).count() == 0:
-        xyz_job = db.query(Job).filter(Job.external_id == "xyz-robotics-001").first()
-        if xyz_job:
+        first_job = db.query(Job).first()
+        if first_job and profile:
+            from app.tools.resume_tailor_engine import ResumeTailorEngine
+            job_dict = {
+                "id": first_job.id,
+                "title": first_job.title,
+                "company": first_job.company,
+                "location": first_job.location,
+                "description": first_job.description,
+                "required_skills": first_job.required_skills or ["Python", "C++", "FastAPI"],
+                "preferred_skills": first_job.preferred_skills or []
+            }
+            prof_dict = {
+                "name": profile.name,
+                "email": profile.email,
+                "phone": profile.phone,
+                "college": profile.college,
+                "degree": profile.degree,
+                "graduation_year": profile.graduation_year,
+                "cgpa": profile.cgpa,
+                "skills": profile.skills,
+                "projects": profile.categorized_projects or profile.projects,
+                "experience": profile.experience
+            }
+            tailored_txt = ResumeTailorEngine.tailor_cv(job_dict, prof_dict)
+            os.makedirs("uploads", exist_ok=True)
+            pdf_path = os.path.join("uploads", f"Tailored_CV_{first_job.company.replace(' ', '_')}_{first_job.id}.pdf")
+            ResumeTailorEngine.generate_pdf(tailored_txt, pdf_path)
+            
             app = Application(
                 profile_id=profile.id,
-                job_id=xyz_job.id,
+                job_id=first_job.id,
                 status="AWAITING_APPROVAL",
-                match_score=94.2,
-                match_breakdown={
-                    "skills": 95,
-                    "education": 100,
-                    "experience": 85,
-                    "location": 100,
-                    "projects": 94
-                },
-                match_reason="Exceptional alignment with ROS2, Python, C++, and robotics navigation coursework and projects at IIT Kharagpur.",
-                why_this_job={
-                    "required_present": ["Python", "C++", "ROS2", "Robotics", "Linux"],
-                    "missing": ["Navigation2", "Docker"]
-                },
-                company_research=xyz_job.company_research,
-                tailored_resume="""AARAV SHARMA — TAILORED FOR XYZ ROBOTICS
-Role: Robotics Software Intern | Bangalore
-
-SUMMARY
-CS & Robotics student at IIT Kharagpur with deep hands-on expertise in ROS2 Humble, C++, Python, and autonomous navigation pipelines. Proven experience developing quadruped dynamic locomotion and LiDAR Cartographer SLAM.
-
-CORE MATCHED SKILLS
-✓ ROS2, Python, Modern C++, Linux, Navigation2, Gazebo Simulation, Mobile Robotics
-
-SELECTED RELEVANT PROJECTS
-1. Quadruped Robot Dynamic Locomotion (ROS2, C++, Gazebo)
-   - Built 12-DOF simulation model with state-space controllers and low-latency ROS2 nodes.
-2. Autonomous Navigation with Cartographer SLAM (ROS2, LiDAR)
-   - Integrated Nav2 costmap layers and real-time obstacle avoidance.
-
-(Truthfully grounded in candidate profile. No qualifications fabricated.)""",
-                cover_letter="""Dear XYZ Robotics Hiring Team,
-
-I am writing to express my strong enthusiasm for the Robotics Software Intern position in Bangalore. As a Computer Science & Robotics undergraduate at IIT Kharagpur graduating in 2027, my technical focus directly aligns with XYZ Robotics' work on autonomous mobile robots.
-
-Through my projects, I have implemented autonomous navigation stacks with ROS2 and Cartographer SLAM, as well as dynamic control algorithms in C++ and Python. Having followed XYZ Robotics' recent advancements in warehouse AMR fleets, I would welcome the opportunity to contribute directly to your perception and autonomy engineering team.
-
-Thank you for your time and consideration.
-
-Sincerely,
-Aarav Sharma
-aarav.sharma@example.com | +91 9876543210""",
-                answers={
-                    "why_role": "This role allows me to directly apply my hands-on ROS2 and C++ navigation experience to real-world autonomous industrial robots.",
-                    "why_company": "XYZ Robotics is leading innovation in autonomous mobile robotics in India, and I admire your engineering rigor and fast deployment velocity.",
-                    "relevant_experience": "I have built dynamic quadruped locomotion controllers and deployed Nav2 LiDAR SLAM systems at the IIT Kharagpur Centre for Robotics.",
-                    "availability": "Available for a full-time 6-month or summer internship starting immediately or as per company schedule."
-                },
+                match_score=94.5,
+                match_breakdown={"skills": 95, "education": 100, "experience": 90, "location": 90, "projects": 95},
+                match_reason=f"Direct alignment with {first_job.best_matching_project or 'candidate portfolio'}.",
+                why_this_job={"required_present": first_job.required_skills, "best_project": first_job.best_matching_project},
+                tailored_resume=tailored_txt,
+                tailored_resume_pdf_path=pdf_path,
+                cover_letter=ResumeTailorEngine.generate_cover_letter(job_dict, prof_dict, first_job.best_matching_project),
+                answers=ResumeTailorEngine.generate_application_answers(job_dict, prof_dict, first_job.best_matching_project),
                 missing_information=[]
             )
             db.add(app)
-            db.commit()
-
-            # Seed an interview follow-up event
-            follow_up = FollowUpEvent(
-                application_id=app.id,
-                event_type="INTERVIEW_INVITATION",
-                scheduled_for=datetime.utcnow() + timedelta(days=3),
-                status="PENDING",
-                subject="Interview Invitation: Robotics Software Intern at XYZ Robotics",
-                content="XYZ Robotics would like to invite you for a 45-minute Technical Discussion on ROS2 architecture and path planning.",
-                interview_details={
-                    "date": (datetime.utcnow() + timedelta(days=3)).strftime("%B %d, %Y at 3:00 PM IST"),
-                    "round": "Technical Round 1 (Autonomy & ROS2 Architecture)",
-                    "interviewers": "Lead Autonomy Engineer",
-                    "meeting_link": "https://meet.google.com/xyz-robt-demo"
-                },
-                prep_notes="Review Cartographer SLAM parameter tuning, Nav2 BT navigator concepts, and C++ memory management (smart pointers)."
-            )
-            db.add(follow_up)
             db.commit()

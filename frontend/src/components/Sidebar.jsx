@@ -8,12 +8,27 @@ import {
   GraduationCap,
   ShieldCheck,
   Zap,
+  FolderGit2,
+  Globe,
 } from "lucide-react";
 
-export function Sidebar({ currentTab, setTab, awaitingCount, interviewCount }) {
+export function Sidebar({ currentTab, setTab, awaitingCount, interviewCount, projectsCount }) {
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
-    { id: "pipeline", label: "Agent Pipeline", icon: <GitFork size={18} /> },
+    {
+      id: "master_cv",
+      label: "Master CV & Projects",
+      icon: <FolderGit2 size={18} />,
+      badge: projectsCount > 0 ? `${projectsCount}` : null,
+      badgeColor: "#38bdf8",
+    },
+    {
+      id: "portal_discovery",
+      label: "Job Discovery Engine",
+      icon: <Globe size={18} />,
+      badge: "5 Tracks",
+      badgeColor: "#818cf8",
+    },
     {
       id: "applications",
       label: "Applications & Review",
@@ -22,7 +37,8 @@ export function Sidebar({ currentTab, setTab, awaitingCount, interviewCount }) {
       badgeColor: "#f59e0b",
     },
     { id: "opportunities", label: "Discovered Jobs", icon: <Briefcase size={18} /> },
-    { id: "profile", label: "Profile & Resume", icon: <User size={18} /> },
+    { id: "pipeline", label: "Agent Pipeline", icon: <GitFork size={18} /> },
+    { id: "profile", label: "Profile & Ground Truth", icon: <User size={18} /> },
     {
       id: "interview",
       label: "Interview Copilot",
@@ -35,7 +51,7 @@ export function Sidebar({ currentTab, setTab, awaitingCount, interviewCount }) {
   return (
     <aside className="sidebar">
       {/* Brand Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "36px", padding: "0 8px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "32px", padding: "0 8px" }}>
         <div
           style={{
             width: "36px",
@@ -61,7 +77,7 @@ export function Sidebar({ currentTab, setTab, awaitingCount, interviewCount }) {
       </div>
 
       {/* Navigation Links */}
-      <nav style={{ display: "flex", flexDirection: "column", gap: "6px", flex: 1 }}>
+      <nav style={{ display: "flex", flexDirection: "column", gap: "5px", flex: 1 }}>
         {navItems.map((item) => {
           const isActive = currentTab === item.id;
           return (
@@ -92,9 +108,9 @@ export function Sidebar({ currentTab, setTab, awaitingCount, interviewCount }) {
                 <span
                   style={{
                     background: item.badgeColor,
-                    color: "#ffffff",
+                    color: item.badgeColor === "#38bdf8" || item.badgeColor === "#818cf8" ? "#0f172a" : "#ffffff",
                     fontWeight: "800",
-                    fontSize: "11px",
+                    fontSize: "10.5px",
                     padding: "2px 7px",
                     borderRadius: "10px",
                   }}
@@ -114,7 +130,7 @@ export function Sidebar({ currentTab, setTab, awaitingCount, interviewCount }) {
           background: "var(--bg-card-subtle)",
           border: "1px solid var(--border-subtle)",
           borderRadius: "10px",
-          padding: "14px",
+          padding: "12px",
           display: "flex",
           gap: "10px",
           alignItems: "flex-start",
@@ -123,9 +139,9 @@ export function Sidebar({ currentTab, setTab, awaitingCount, interviewCount }) {
       >
         <ShieldCheck size={18} color="var(--accent-emerald)" style={{ flexShrink: 0, marginTop: "2px" }} />
         <div>
-          <div style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-primary)" }}>Safety Guaranteed</div>
-          <div style={{ fontSize: "11.5px", color: "var(--text-muted)", marginTop: "2px", lineHeight: "1.4" }}>
-            Strictly zero qualification fabrication. Human approval enforced.
+          <div style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-primary)" }}>Human Approval Enforced</div>
+          <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px", lineHeight: "1.35" }}>
+            Zero synthetic qualifications. Permission required before submission.
           </div>
         </div>
       </div>
