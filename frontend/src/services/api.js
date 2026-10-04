@@ -22,6 +22,9 @@ export const api = {
   createProfile: (data) => fetchJson("/profiles", { method: "POST", body: JSON.stringify(data) }),
   updateProfile: (id, data) => fetchJson(`/profiles/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   getProfileProjects: (profileId) => fetchJson(`/profiles/${profileId}/projects`),
+  saveTailoredCV: (profileId, data) => fetchJson(`/profiles/${profileId}/save-tailored-cv`, { method: "POST", body: JSON.stringify(data) }),
+  getSavedTailoredCVs: (profileId) => fetchJson(`/profiles/${profileId}/tailored-cvs`),
+  deleteSavedTailoredCV: (profileId, cvId) => fetchJson(`/profiles/${profileId}/tailored-cvs/${cvId}`, { method: "DELETE" }),
   
   uploadMasterCV: async (file, profileId = null) => {
     const formData = new FormData();
@@ -59,6 +62,8 @@ export const api = {
   // Jobs
   getJobs: () => fetchJson("/jobs"),
   getJob: (id) => fetchJson(`/jobs/${id}`),
+  toggleJobWishlist: (jobId) => fetchJson(`/jobs/${jobId}/wishlist`, { method: "POST" }),
+  markJobBrowsed: (jobId) => fetchJson(`/jobs/${jobId}/browse`, { method: "POST" }),
   searchJobsPreview: (q) => fetchJson(`/jobs/search/preview?q=${encodeURIComponent(q)}`),
   analyzeCustomJD: (jdText, title = "", company = "", profileId = null) =>
     fetchJson("/jobs/analyze-custom-jd", {
@@ -74,6 +79,7 @@ export const api = {
   // Applications & JD-Tailored ATS CV
   getApplications: () => fetchJson("/applications"),
   getApplication: (id) => fetchJson(`/applications/${id}`),
+  toggleApplicationWishlist: (appId) => fetchJson(`/applications/${appId}/wishlist`, { method: "POST" }),
   tailorForJob: (jobId, profileId = null) =>
     fetchJson(`/applications/tailor-for-job/${jobId}${profileId ? `?profile_id=${profileId}` : ""}`, {
       method: "POST",

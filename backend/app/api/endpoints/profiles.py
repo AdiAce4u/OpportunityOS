@@ -1,11 +1,16 @@
 import os
 import io
+import re
+import uuid
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Body
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.models import UserProfile
-from app.schemas.profile import ProfileCreate, ProfileResponse
+from app.models import UserProfile, Application
+from app.schemas.profile import ProfileCreate, ProfileResponse, SaveTailoredCVRequest
 from app.tools.cv_parser_engine import MasterCVParser
+from app.tools.resume_tailor_engine import ResumeTailorEngine
 from pypdf import PdfReader
 
 router = APIRouter(prefix="/profiles", tags=["Profiles"])
@@ -122,6 +127,16 @@ async def upload_master_cv(
     profile.resume_text = text
     profile.parsed_data = parsed
 
+    if filename.lower().endswith(".pdf"):
+        profile.master_cv_pdf_path = file_path
+    else:
+        try:
+            pdf_path = os.path.join("uploads", "mastercv.pdf")
+            ResumeTailorEngine.generate_pdf(text, pdf_path)
+            profile.master_cv_pdf_path = pdf_path
+        except Exception:
+            profile.master_cv_pdf_path = "uploads/mastercv.pdf"
+
     db.commit()
     db.refresh(profile)
 
@@ -144,6 +159,11 @@ async def upload_master_cv(
         "domain_breakdown": {k: len(v) for k, v in by_domain.items()},
         "projects": profile.projects,
         "skills": profile.skills,
+        "resume_filename": profile.resume_filename,
+        "resume_text": profile.resume_text,
+        "master_cv_markdown": profile.master_cv_markdown,
+        "master_cv_pdf_path": profile.master_cv_pdf_path,
+        "saved_tailored_cvs": profile.saved_tailored_cvs or [],
         "profile": {
             "id": profile.id,
             "name": profile.name,
@@ -161,6 +181,11 @@ async def upload_master_cv(
             "preferred_locations": profile.preferred_locations or [],
             "minimum_salary": profile.minimum_salary,
             "work_authorization": profile.work_authorization,
+            "resume_filename": profile.resume_filename,
+            "resume_text": profile.resume_text,
+            "master_cv_markdown": profile.master_cv_markdown,
+            "master_cv_pdf_path": profile.master_cv_pdf_path,
+            "saved_tailored_cvs": profile.saved_tailored_cvs or [],
         }
     }
 
@@ -172,6 +197,126 @@ async def upload_resume(
 ):
     """Backwards compatible endpoint delegating to upload_master_cv."""
     return await upload_master_cv(file=file, profile_id=profile_id, db=db)
+
+@router.get("/{profile_id}/master-cv-pdf")
+def get_master_cv_pdf(profile_id: int, db: Session = Depends(get_db)):
+    """
+    Serves the candidate's Master CV as a PDF file with inline disposition for browser viewing.
+    If the file does not exist, automatically generates it using candidate data.
+    """
+    profile = db.get(UserProfile, profile_id)
+    if not profile:
+        profile = db.query(UserProfile).first()
+    if not profile:
+        raise HTTPException(404, "Candidate profile not found")
+
+    os.makedirs("uploads", exist_ok=True)
+    pdf_path = profile.master_cv_pdf_path
+
+    if not pdf_path or not os.path.exists(pdf_path):
+        if os.path.exists("uploads/mastercv.pdf"):
+            pdf_path = "uploads/mastercv.pdf"
+        elif profile.master_cv_markdown or profile.resume_text:
+            pdf_path = "uploads/mastercv.pdf"
+            ResumeTailorEngine.generate_pdf(profile.master_cv_markdown or profile.resume_text, pdf_path)
+            profile.master_cv_pdf_path = pdf_path
+            db.commit()
+
+    if not pdf_path or not os.path.exists(pdf_path):
+        raise HTTPException(404, "Master CV PDF file not found on server")
+
+    filename = os.path.basename(pdf_path)
+    return FileResponse(
+        pdf_path,
+        media_type="application/pdf",
+        filename=filename,
+        headers={"Content-Disposition": f"inline; filename={filename}"}
+    )
+
+@router.post("/{profile_id}/save-tailored-cv")
+def save_tailored_cv(
+    profile_id: int,
+    req: SaveTailoredCVRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Saves a tailored CV to the candidate's profile.
+    Naming follows the format: CV_{company}_{role}.pdf
+    """
+    profile = db.get(UserProfile, profile_id)
+    if not profile:
+        profile = db.query(UserProfile).first()
+    if not profile:
+        raise HTTPException(404, "Candidate profile not found")
+
+    os.makedirs("uploads", exist_ok=True)
+    clean_company = re.sub(r'[^a-zA-Z0-9]+', '_', req.company.strip()).strip('_')
+    clean_role = re.sub(r'[^a-zA-Z0-9]+', '_', req.role.strip()).strip('_')
+    cv_filename = f"CV_{clean_company}_{clean_role}.pdf"
+    target_path = os.path.join("uploads", cv_filename)
+
+    # 1. Compile or copy PDF
+    if req.resume_text and req.resume_text.strip():
+        ResumeTailorEngine.generate_pdf(req.resume_text, target_path)
+    elif req.application_id:
+        app_rec = db.get(Application, req.application_id)
+        if app_rec and app_rec.tailored_resume_pdf_path and os.path.exists(app_rec.tailored_resume_pdf_path):
+            import shutil
+            shutil.copy2(app_rec.tailored_resume_pdf_path, target_path)
+        elif app_rec and app_rec.tailored_resume:
+            ResumeTailorEngine.generate_pdf(app_rec.tailored_resume, target_path)
+        else:
+            ResumeTailorEngine.generate_pdf(profile.master_cv_markdown or "Tailored Resume", target_path)
+    else:
+        ResumeTailorEngine.generate_pdf(profile.master_cv_markdown or "Tailored Resume", target_path)
+
+    # 2. Add or update entry in saved_tailored_cvs
+    cvs = list(profile.saved_tailored_cvs or [])
+    # Remove existing entry with same filename if present
+    cvs = [c for c in cvs if c.get("filename") != cv_filename]
+
+    cv_entry = {
+        "id": str(uuid.uuid4())[:8],
+        "company": req.company,
+        "role": req.role,
+        "filename": cv_filename,
+        "pdf_url": f"http://localhost:8000/uploads/{cv_filename}",
+        "created_at": datetime.utcnow().strftime("%b %d, %Y • %I:%M %p"),
+        "application_id": req.application_id
+    }
+    cvs.insert(0, cv_entry)
+    profile.saved_tailored_cvs = cvs
+    db.commit()
+    db.refresh(profile)
+
+    return {
+        "status": "SUCCESS",
+        "message": f"Successfully saved {cv_filename} to Profile!",
+        "filename": cv_filename,
+        "cv": cv_entry,
+        "saved_tailored_cvs": profile.saved_tailored_cvs
+    }
+
+@router.get("/{profile_id}/tailored-cvs")
+def get_saved_tailored_cvs(profile_id: int, db: Session = Depends(get_db)):
+    profile = db.get(UserProfile, profile_id)
+    if not profile:
+        profile = db.query(UserProfile).first()
+    if not profile:
+        raise HTTPException(404, "Profile not found")
+    return profile.saved_tailored_cvs or []
+
+@router.delete("/{profile_id}/tailored-cvs/{cv_id}")
+def delete_saved_tailored_cv(profile_id: int, cv_id: str, db: Session = Depends(get_db)):
+    profile = db.get(UserProfile, profile_id)
+    if not profile:
+        raise HTTPException(404, "Profile not found")
+    cvs = list(profile.saved_tailored_cvs or [])
+    cvs = [c for c in cvs if c.get("id") != cv_id and c.get("filename") != cv_id]
+    profile.saved_tailored_cvs = cvs
+    db.commit()
+    db.refresh(profile)
+    return {"status": "SUCCESS", "saved_tailored_cvs": profile.saved_tailored_cvs}
 
 @router.get("/{profile_id}/projects")
 def get_profile_projects(profile_id: int, db: Session = Depends(get_db)):
@@ -192,3 +337,4 @@ def get_profile_projects(profile_id: int, db: Session = Depends(get_db)):
         "domains": by_domain,
         "all_projects": projects
     }
+

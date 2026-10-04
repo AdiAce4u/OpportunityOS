@@ -48,4 +48,10 @@ class Job(Base):
     
     company_research: Mapped[dict] = mapped_column(JSON, default=dict)
     raw_data: Mapped[dict] = mapped_column(JSON, default=dict)
+    
+    # Candidate interaction & wishlist state
+    is_wishlisted: Mapped[bool] = mapped_column(Boolean, default=False)
+    recently_browsed: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_browsed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

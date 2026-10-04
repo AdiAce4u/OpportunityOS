@@ -25,6 +25,8 @@ class ProfileCreate(BaseModel):
     master_cv_markdown: str = ""
     resume_text: str = ""
     resume_filename: str = ""
+    master_cv_pdf_path: str = "uploads/mastercv.pdf"
+    saved_tailored_cvs: List[Any] = Field(default_factory=list)
 
 class ProfileResponse(ProfileCreate):
     id: int
@@ -32,3 +34,10 @@ class ProfileResponse(ProfileCreate):
 
 class ResumeParseRequest(BaseModel):
     text: str
+
+class SaveTailoredCVRequest(BaseModel):
+    company: str
+    role: str
+    application_id: Optional[int] = None
+    resume_text: Optional[str] = None
+

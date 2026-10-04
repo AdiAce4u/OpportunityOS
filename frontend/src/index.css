@@ -4,23 +4,24 @@
    DESIGN TOKENS - COHESIVE, HUMAN-CRAFTED PALETTE (NO AI-SLOP)
    ========================================================================== */
 
-:root {
-  /* Surface & Canvas - Dark Mode (Deep slate-charcoal, calm & legible) */
-  --bg-main: #0c1017;
-  --bg-sidebar: #090d15;
-  --bg-navbar: rgba(12, 16, 23, 0.85);
-  --bg-card: #121826;
-  --bg-card-hover: #182236;
-  --bg-card-subtle: #0e1422;
-  --bg-card-glass: rgba(18, 24, 38, 0.92);
-  --bg-well: #090d16;
-  --bg-input: #0e1422;
+:root,
+:root[data-theme="dark"] {
+  /* Surface & Canvas - Dark Mode (Neutral Gray & Charcoal Palette, Zero Blue Tint) */
+  --bg-main: #111113;
+  --bg-sidebar: #0d0d0f;
+  --bg-navbar: rgba(17, 17, 19, 0.88);
+  --bg-card: #18181b;
+  --bg-card-hover: #222226;
+  --bg-card-subtle: #141416;
+  --bg-card-glass: rgba(24, 24, 27, 0.94);
+  --bg-well: #101012;
+  --bg-input: #141416;
 
-  /* Borders */
-  --border-subtle: #1e293b;
-  --border-hover: #334155;
+  /* Borders - Refined Neutral Grays */
+  --border-subtle: #27272a;
+  --border-hover: #3f3f46;
   --border-active: #6366f1;
-  --border-strong: #2c384e;
+  --border-strong: #38383e;
 
   /* Primary Brand (Refined Indigo) */
   --primary: #6366f1;
@@ -50,21 +51,21 @@
   --accent-cyan-text: #38bdf8;
   --accent-cyan-border: rgba(6, 182, 212, 0.28);
 
-  /* Typography */
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  /* Typography - Clean Neutral Grays */
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
 
-  /* Interview Banner */
-  --banner-interview-bg: linear-gradient(90deg, #151d34 0%, #10182c 100%);
-  --banner-interview-border: #283758;
-  --banner-interview-title: #f8fafc;
-  --banner-interview-sub: #93c5fd;
+  /* Banner */
+  --banner-interview-bg: linear-gradient(90deg, #18181b 0%, #1c1c20 100%);
+  --banner-interview-border: #27272a;
+  --banner-interview-title: #f4f4f5;
+  --banner-interview-sub: #a1a1aa;
 
   /* Shadows */
-  --card-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.35);
-  --card-shadow-hover: 0 10px 25px -4px rgba(0, 0, 0, 0.45);
-  --modal-overlay: rgba(3, 7, 18, 0.78);
+  --card-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.45);
+  --card-shadow-hover: 0 10px 25px -4px rgba(0, 0, 0, 0.6);
+  --modal-overlay: rgba(0, 0, 0, 0.78);
 
   /* Radius */
   --radius-sm: 8px;
@@ -74,22 +75,22 @@
 }
 
 :root[data-theme="light"] {
-  /* Surface & Canvas - Light Mode (Clean, warm-tinted slate, high-craft SaaS) */
-  --bg-main: #f8fafc;
-  --bg-sidebar: #ffffff;
-  --bg-navbar: rgba(255, 255, 255, 0.92);
+  /* Surface & Canvas - Light Mode (Cool Platinum & Ice-Gray, Not Pure White) */
+  --bg-main: #f0f2f5;
+  --bg-sidebar: #e9ecf0;
+  --bg-navbar: rgba(240, 242, 245, 0.92);
   --bg-card: #ffffff;
-  --bg-card-hover: #f8fafc;
-  --bg-card-subtle: #f8fafc;
-  --bg-card-glass: rgba(255, 255, 255, 0.96);
-  --bg-well: #f1f5f9;
+  --bg-card-hover: #f4f6f9;
+  --bg-card-subtle: #e9edf2;
+  --bg-card-glass: rgba(255, 255, 255, 0.95);
+  --bg-well: #e3e7ec;
   --bg-input: #ffffff;
 
-  /* Borders */
-  --border-subtle: #e2e8f0;
-  --border-hover: #cbd5e1;
+  /* Borders - Cool Platinum & Silver */
+  --border-subtle: #d3d8df;
+  --border-hover: #b8c0cc;
   --border-active: #4f46e5;
-  --border-strong: #cbd5e1;
+  --border-strong: #a9b3c2;
 
   /* Primary Brand (Deep Indigo) */
   --primary: #4f46e5;
@@ -119,20 +120,20 @@
   --accent-cyan-text: #0369a1;
   --accent-cyan-border: #bae6fd;
 
-  /* Typography */
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
+  /* Typography - Cool Crisp Charcoal */
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
 
-  /* Interview Banner */
-  --banner-interview-bg: linear-gradient(90deg, #eef2ff 0%, #f0fdf4 100%);
-  --banner-interview-border: #c7d2fe;
-  --banner-interview-title: #1e1b4b;
-  --banner-interview-sub: #3730a3;
+  /* Banner */
+  --banner-interview-bg: linear-gradient(90deg, #e9edf2 0%, #e2e7ec 100%);
+  --banner-interview-border: #d3d8df;
+  --banner-interview-title: #111827;
+  --banner-interview-sub: #4b5563;
 
   /* Shadows */
-  --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
-  --card-shadow-hover: 0 8px 20px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  --card-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  --card-shadow-hover: 0 8px 20px -3px rgba(15, 23, 42, 0.09), 0 4px 6px -2px rgba(15, 23, 42, 0.05);
   --modal-overlay: rgba(15, 23, 42, 0.45);
 }
 

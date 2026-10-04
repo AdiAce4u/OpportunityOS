@@ -30,6 +30,8 @@ class JobSchema(BaseModel):
     required_documents: List[str] = Field(default_factory=list)
     source: str = "portal"
     company_research: dict[str, Any] = Field(default_factory=dict)
+    is_wishlisted: bool = False
+    recently_browsed: bool = False
 
 class JobSearchQuery(BaseModel):
     query: str

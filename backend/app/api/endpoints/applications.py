@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
@@ -12,10 +13,28 @@ router = APIRouter(prefix="/applications", tags=["Applications"])
 
 @router.get("", response_model=list[dict])
 def list_applications(db: Session = Depends(get_db)):
+    """
+    Returns only opportunities that the candidate has:
+    1. Applied to (status in SUBMITTED, APPLIED, UNDER_REVIEW, INTERVIEW, or applied_date)
+    2. Marked as Wishlisted (is_wishlisted == True)
+    3. Recently Browsed (recently_browsed == True)
+    """
     rows = db.query(Application).order_by(Application.updated_at.desc()).all()
     results = []
+    seen_job_ids = set()
+
     for row in rows:
         job = db.get(Job, row.job_id)
+        is_wishlisted = bool(row.is_wishlisted or (job.is_wishlisted if job else False))
+        is_browsed = bool(row.recently_browsed or (job.recently_browsed if job else False))
+        is_applied = bool(row.status in ["SUBMITTED", "APPLIED", "UNDER_REVIEW", "INTERVIEW", "OFFER"] or row.applied_date or row.external_application_id)
+        is_preparing_or_awaiting = bool(row.status in ["AWAITING_APPROVAL", "PREPARING"])
+
+        # Filter strictly to applied, wishlisted, recently browsed, or active awaiting approval
+        if not (is_applied or is_wishlisted or is_browsed or is_preparing_or_awaiting):
+            continue
+
+        seen_job_ids.add(row.job_id)
         results.append({
             "id": row.id,
             "job_id": row.job_id,
@@ -25,6 +44,9 @@ def list_applications(db: Session = Depends(get_db)):
             "salary_text": job.salary_text if job else "",
             "site": job.site if job else "portal",
             "status": row.status,
+            "is_wishlisted": is_wishlisted,
+            "recently_browsed": is_browsed,
+            "is_applied": is_applied,
             "match_score": row.match_score,
             "match_reason": row.match_reason,
             "best_matching_project": job.best_matching_project if job else "",
@@ -33,7 +55,61 @@ def list_applications(db: Session = Depends(get_db)):
             "updated_at": row.updated_at.strftime("%Y-%m-%d %H:%M") if row.updated_at else None,
             "applied_date": row.applied_date.strftime("%Y-%m-%d %H:%M") if row.applied_date else None,
         })
+
+    # Include any Jobs that were wishlisted or recently browsed without a prior Application record
+    special_jobs = db.query(Job).filter((Job.is_wishlisted == True) | (Job.recently_browsed == True)).all()
+    for j in special_jobs:
+        if j.id in seen_job_ids:
+            continue
+        status_label = "WISHLISTED" if j.is_wishlisted else "RECENTLY_BROWSED"
+        results.append({
+            "id": f"job-{j.id}",
+            "job_id": j.id,
+            "title": j.title,
+            "company": j.company,
+            "location": j.location,
+            "salary_text": j.display_salary or j.salary_text or "Competitive",
+            "site": j.site or "portal",
+            "status": status_label,
+            "is_wishlisted": bool(j.is_wishlisted),
+            "recently_browsed": bool(j.recently_browsed),
+            "is_applied": False,
+            "match_score": j.match_score,
+            "match_reason": f"Project alignment with {j.best_matching_project}" if j.best_matching_project else "Matched role",
+            "best_matching_project": j.best_matching_project or "",
+            "tailored_resume_pdf_path": "",
+            "external_application_id": "",
+            "updated_at": (j.last_browsed_at or j.created_at).strftime("%Y-%m-%d %H:%M") if (j.last_browsed_at or j.created_at) else None,
+            "applied_date": None,
+        })
+
     return results
+
+@router.post("/{application_id}/wishlist")
+def toggle_application_wishlist(application_id: str, db: Session = Depends(get_db)):
+    """
+    Toggles wishlist state from the application pipeline tracker.
+    Handles numeric application_id or 'job-123' format.
+    """
+    if str(application_id).startswith("job-"):
+        job_id = int(str(application_id).replace("job-", ""))
+        job = db.get(Job, job_id)
+        if not job:
+            raise HTTPException(404, "Job not found")
+        job.is_wishlisted = not bool(job.is_wishlisted)
+        db.commit()
+        return {"id": application_id, "is_wishlisted": job.is_wishlisted}
+    else:
+        app_rec = db.get(Application, int(application_id))
+        if not app_rec:
+            raise HTTPException(404, "Application not found")
+        app_rec.is_wishlisted = not bool(app_rec.is_wishlisted)
+        job = db.get(Job, app_rec.job_id)
+        if job:
+            job.is_wishlisted = app_rec.is_wishlisted
+        db.commit()
+        return {"id": app_rec.id, "is_wishlisted": app_rec.is_wishlisted}
+
 
 @router.get("/{application_id}")
 def get_application(application_id: int, db: Session = Depends(get_db)):
@@ -41,11 +117,22 @@ def get_application(application_id: int, db: Session = Depends(get_db)):
     if not row:
         raise HTTPException(404, "Application not found")
     job = db.get(Job, row.job_id)
+
+    # Mark as recently browsed
+    row.recently_browsed = True
+    row.last_browsed_at = datetime.utcnow()
+    if job:
+        job.recently_browsed = True
+        job.last_browsed_at = row.last_browsed_at
+    db.commit()
+
     return {
         "id": row.id,
         "profile_id": row.profile_id,
         "job_id": row.job_id,
         "status": row.status,
+        "is_wishlisted": bool(row.is_wishlisted or (job.is_wishlisted if job else False)),
+        "recently_browsed": True,
         "match_score": row.match_score,
         "match_breakdown": row.match_breakdown or {},
         "match_reason": row.match_reason,

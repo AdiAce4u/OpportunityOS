@@ -1,10 +1,11 @@
 import uuid
+from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.models import Job, UserProfile
+from app.models import Job, UserProfile, Application
 from app.schemas.job import JobSchema, CustomJDAnalysisRequest
 from app.tools.portal_search_engine import search_live_portals, ROLE_CATEGORIES, CVProjectMatcher, CompensationParser
 from app.tools.extraction_tools import parse_custom_jd
@@ -24,6 +25,44 @@ class PortalSearchRequest(BaseModel):
 @router.get("", response_model=list[JobSchema])
 def list_jobs(db: Session = Depends(get_db)):
     return db.query(Job).order_by(Job.match_score.desc(), Job.created_at.desc()).all()
+
+@router.post("/{job_id}/wishlist")
+def toggle_wishlist(job_id: int, db: Session = Depends(get_db)):
+    """
+    Toggles the wishlist state (heart icon) for a job opportunity.
+    """
+    job = db.get(Job, job_id)
+    if not job:
+        raise HTTPException(404, "Job not found")
+    job.is_wishlisted = not bool(job.is_wishlisted)
+
+    # Sync to application if existing
+    app_rec = db.query(Application).filter(Application.job_id == job.id).first()
+    if app_rec:
+        app_rec.is_wishlisted = job.is_wishlisted
+
+    db.commit()
+    return {"job_id": job.id, "is_wishlisted": job.is_wishlisted, "message": "Wishlist updated"}
+
+@router.post("/{job_id}/browse")
+def mark_job_browsed(job_id: int, db: Session = Depends(get_db)):
+    """
+    Marks an opportunity as recently browsed when the candidate inspects or opens it.
+    """
+    job = db.get(Job, job_id)
+    if not job:
+        raise HTTPException(404, "Job not found")
+    job.recently_browsed = True
+    job.last_browsed_at = datetime.utcnow()
+
+    app_rec = db.query(Application).filter(Application.job_id == job.id).first()
+    if app_rec:
+        app_rec.recently_browsed = True
+        app_rec.last_browsed_at = job.last_browsed_at
+
+    db.commit()
+    return {"job_id": job.id, "recently_browsed": True}
+
 
 @router.get("/categories")
 def get_job_categories():

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Search,
   Globe,
@@ -12,12 +12,18 @@ import {
   Database,
   Code2,
   TrendingUp,
+  Heart,
+  ChevronDown,
 } from "lucide-react";
 import { api } from "../services/api";
 
-export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndApply }) {
+export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndApply, onToggleWishlist }) {
   // 5 Tracks requested: "software", "data", "consult", "finance", "core"
   const [selectedTrack, setSelectedTrack] = useState("software");
+  const [targetProfileText, setTargetProfileText] = useState("Software (SDE, Backend, Full Stack, DevOps)");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
   const [location, setLocation] = useState("India");
   const [isRemote, setIsRemote] = useState(false);
   const [resultsCount, setResultsCount] = useState(15);
@@ -28,13 +34,46 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
   const [statusMessage, setStatusMessage] = useState("");
   const [tailoringJobId, setTailoringJobId] = useState(null);
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   // The 5 Tracks
   const tracks = [
     { id: "software", label: "Software (SDE, Backend, Full Stack, DevOps)", icon: <Code2 size={16} color="var(--primary)" />, countLabel: "SDE" },
-    { id: "data", label: "Data (Data Science, ML, AI, Analytics)", icon: <Database size={16} color="var(--accent-indigo-text)" />, countLabel: "Data" },
+    { id: "data", label: "Data (Data Science, ML, AI, Analytics)", icon: <Database size={16} color="var(--accent-cyan-text)" />, countLabel: "Data" },
     { id: "consult", label: "Consult (Management, Strategy, Business Analyst)", icon: <Briefcase size={16} color="var(--accent-rose-text)" />, countLabel: "Consult" },
-    { id: "finance", label: "Finance (Quantitative Analyst, Risk, Fintech)", icon: <TrendingUp size={16} color="var(--accent-cyan-text)" />, countLabel: "Finance" },
+    { id: "finance", label: "Finance (Quantitative Analyst, Risk, Fintech)", icon: <TrendingUp size={16} color="var(--accent-amber-text)" />, countLabel: "Finance" },
     { id: "core", label: "Core (Robotics, Embedded, Hardware, Mechanical)", icon: <Cpu size={16} color="var(--accent-emerald-text)" />, countLabel: "Core" },
+  ];
+
+  const presetRoles = [
+    "Software Development Engineer (SDE)",
+    "Backend Engineer",
+    "Frontend Engineer",
+    "Full Stack Developer",
+    "DevOps & Cloud Engineer",
+    "Machine Learning Engineer",
+    "Data Scientist",
+    "AI & Computer Vision Engineer",
+    "Robotics Software Engineer",
+    "Embedded Systems & Firmware Engineer",
+    "Quantitative Analyst / Researcher",
+    "Management Consultant / Business Analyst",
+  ];
+
+  const allDatalistOptions = [
+    ...tracks.map((t) => t.label),
+    ...presetRoles,
   ];
 
   const portalsList = [
@@ -54,15 +93,30 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
     }
   };
 
-  // Fetch jobs for track
-  const executeSearch = async (trackToSearch = selectedTrack) => {
+  // Fetch jobs for track or custom query text
+  const executeSearch = async (queryOverride = null) => {
     setSearching(true);
-    setStatusMessage(`Searching portals for [${trackToSearch.toUpperCase()}] openings...`);
+    const textQuery = (queryOverride !== null ? queryOverride : targetProfileText) || "software";
+    setStatusMessage(`Searching portals for [${textQuery.toUpperCase()}] openings...`);
+
+    let category = selectedTrack || "software";
+    const lower = textQuery.toLowerCase();
+    if (lower.includes("robot") || lower.includes("embedded") || lower.includes("hardware") || lower.includes("core") || lower.includes("mechanical") || lower.includes("firmware")) {
+      category = "core";
+    } else if (lower.includes("data") || lower.includes("machine learning") || lower.includes(" ml") || lower.includes("ai") || lower.includes("analytics") || lower.includes("vision") || lower.includes("nlp")) {
+      category = "data";
+    } else if (lower.includes("consult") || lower.includes("strategy") || lower.includes("business analyst") || lower.includes("management")) {
+      category = "consult";
+    } else if (lower.includes("finance") || lower.includes("quant") || lower.includes("risk") || lower.includes("fintech") || lower.includes("trader")) {
+      category = "finance";
+    } else if (lower.includes("software") || lower.includes("sde") || lower.includes("backend") || lower.includes("frontend") || lower.includes("full stack") || lower.includes("devops") || lower.includes("web")) {
+      category = "software";
+    }
 
     try {
       const payload = {
-        category: trackToSearch,
-        query: trackToSearch,
+        category: category,
+        query: textQuery,
         location: location,
         results_wanted: parseInt(resultsCount),
         is_remote: isRemote,
@@ -73,7 +127,7 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
       const res = await api.searchJobPortals(payload);
       const jobsList = res.jobs || [];
       setDiscoveredJobs(jobsList);
-      setStatusMessage(`✓ Loaded ${jobsList.length} current job openings for [${trackToSearch.toUpperCase()}] track.`);
+      setStatusMessage(`✓ Loaded ${jobsList.length} current job openings for [${textQuery.toUpperCase()}].`);
     } catch (err) {
       setStatusMessage(`Search notice: ${err.message}`);
     } finally {
@@ -81,18 +135,22 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
     }
   };
 
-  // Trigger search on mount and when selectedTrack changes
+  // Trigger initial search on mount
   useEffect(() => {
-    executeSearch(selectedTrack);
-  }, [selectedTrack]);
+    executeSearch("software");
+  }, []);
 
-  const handleTrackChange = (newTrack) => {
-    setSelectedTrack(newTrack);
+  const handleSelectTrack = (trackId, trackLabel) => {
+    setSelectedTrack(trackId);
+    setTargetProfileText(trackLabel || trackId);
+    setIsDropdownOpen(false);
+    executeSearch(trackLabel || trackId);
   };
 
   const handleFormSubmit = (e) => {
     if (e) e.preventDefault();
-    executeSearch(selectedTrack);
+    setIsDropdownOpen(false);
+    executeSearch(targetProfileText);
   };
 
   const handleTailorAndApply = async (job) => {
@@ -157,7 +215,7 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
               <button
                 key={t.id}
                 type="button"
-                onClick={() => handleTrackChange(t.id)}
+                onClick={() => handleSelectTrack(t.id, t.label)}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -186,29 +244,158 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
         <form onSubmit={handleFormSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
             
-            {/* 5-Track Dropdown */}
-            <div>
+            {/* Target Job Profile (Editable Text Box + Dropdown Options) */}
+            <div style={{ position: "relative" }} ref={dropdownRef}>
               <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "var(--primary-text)", marginBottom: "6px" }}>
-                Target Job Profile (5 Tracks)
+                Target Job Profile (Edit or Select Track)
               </label>
-              <select
-                className="input"
-                style={{
-                  fontWeight: "700",
-                  color: "var(--text-primary)",
-                  background: "var(--bg-input)",
-                  border: "1px solid var(--border-subtle)",
-                  fontSize: "13.5px",
-                }}
-                value={selectedTrack}
-                onChange={(e) => handleTrackChange(e.target.value)}
-              >
-                <option value="software">💻 Software (SDE, Backend, Full Stack, DevOps)</option>
-                <option value="data">🧠 Data (Data Science, ML, AI, Analytics)</option>
-                <option value="consult">💼 Consult (Management, Strategy, Business Analyst)</option>
-                <option value="finance">📈 Finance (Quantitative Analyst, Risk, Fintech)</option>
-                <option value="core">🦾 Core (Robotics, Embedded, Hardware, Mechanical)</option>
-              </select>
+
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <input
+                  type="text"
+                  className="input"
+                  list="target-job-profiles-list"
+                  value={targetProfileText}
+                  onChange={(e) => setTargetProfileText(e.target.value)}
+                  onFocus={() => setIsDropdownOpen(true)}
+                  placeholder="Type any role (e.g. Computer Vision Engineer) or select..."
+                  style={{
+                    fontWeight: "600",
+                    color: "var(--text-primary)",
+                    background: "var(--bg-input)",
+                    border: "1px solid var(--border-subtle)",
+                    fontSize: "13px",
+                    paddingRight: "36px",
+                  }}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setIsDropdownOpen((prev) => !prev)}
+                  style={{
+                    position: "absolute",
+                    right: "8px",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "6px",
+                    color: "var(--text-muted)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  title="Toggle options"
+                >
+                  <ChevronDown size={16} />
+                </button>
+              </div>
+
+              {/* Native Datalist for Keyboard Autocomplete & Arrow Selection */}
+              <datalist id="target-job-profiles-list">
+                {allDatalistOptions.map((opt, idx) => (
+                  <option key={idx} value={opt} />
+                ))}
+              </datalist>
+
+              {/* Interactive Dropdown Popover */}
+              {isDropdownOpen && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 4px)",
+                    left: 0,
+                    right: 0,
+                    background: "var(--bg-card)",
+                    border: "1px solid var(--border-subtle)",
+                    borderRadius: "8px",
+                    boxShadow: "var(--card-shadow-hover)",
+                    zIndex: 50,
+                    maxHeight: "260px",
+                    overflowY: "auto",
+                    padding: "6px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "2px",
+                  }}
+                >
+                  <div style={{ fontSize: "11px", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", padding: "6px 8px" }}>
+                    5 Core Tracks
+                  </div>
+                  {tracks.map((t) => (
+                    <div
+                      key={t.id}
+                      onClick={() => handleSelectTrack(t.id, t.label)}
+                      style={{
+                        padding: "8px 10px",
+                        borderRadius: "6px",
+                        fontSize: "12px",
+                        fontWeight: "600",
+                        color: "var(--text-primary)",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        background: targetProfileText === t.label ? "var(--primary-subtle)" : "transparent",
+                        transition: "background 0.12s ease",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-card-hover)")}
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.background =
+                          targetProfileText === t.label ? "var(--primary-subtle)" : "transparent")
+                      }
+                    >
+                      {t.icon}
+                      <span>{t.label}</span>
+                    </div>
+                  ))}
+
+                  <div
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      color: "var(--text-muted)",
+                      textTransform: "uppercase",
+                      padding: "8px 8px 4px",
+                      borderTop: "1px solid var(--border-subtle)",
+                      marginTop: "4px",
+                    }}
+                  >
+                    Popular Specialized Roles
+                  </div>
+                  {presetRoles.map((role, rIdx) => (
+                    <div
+                      key={rIdx}
+                      onClick={() => {
+                        setTargetProfileText(role);
+                        setIsDropdownOpen(false);
+                        executeSearch(role);
+                      }}
+                      style={{
+                        padding: "7px 10px",
+                        borderRadius: "6px",
+                        fontSize: "12px",
+                        color: "var(--text-secondary)",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        transition: "background 0.12s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "var(--bg-card-hover)";
+                        e.currentTarget.style.color = "var(--text-primary)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "transparent";
+                        e.currentTarget.style.color = "var(--text-secondary)";
+                      }}
+                    >
+                      <span>⚡</span>
+                      <span>{role}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Location Input */}
@@ -357,6 +544,34 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
                   <div style={{ flex: 1, minWidth: "280px" }}>
                     {/* Header line: Title, Portal, Match badge */}
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px", flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onToggleWishlist) onToggleWishlist(job);
+                        }}
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          padding: "4px",
+                          borderRadius: "50%",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          transition: "transform 0.15s ease",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.2)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                        title={job.is_wishlisted ? "Remove from Wishlist" : "Wishlist this opportunity"}
+                      >
+                        <Heart
+                          size={17}
+                          fill={job.is_wishlisted ? "#f43f5e" : "transparent"}
+                          color={job.is_wishlisted ? "#f43f5e" : "var(--text-muted)"}
+                        />
+                      </button>
+
                       <span style={{ fontSize: "15.5px", fontWeight: "800", color: "var(--text-primary)" }}>
                         {job.title}
                       </span>

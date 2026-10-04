@@ -32,6 +32,8 @@ class UserProfile(Base):
     master_cv_markdown: Mapped[str] = mapped_column(Text, default="")
     resume_filename: Mapped[str] = mapped_column(String(255), default="")
     resume_text: Mapped[str] = mapped_column(Text, default="")
+    master_cv_pdf_path: Mapped[str] = mapped_column(String(255), default="uploads/mastercv.pdf")
+    saved_tailored_cvs: Mapped[list] = mapped_column(JSON, default=list)
     parsed_data: Mapped[dict] = mapped_column(JSON, default=dict)
     
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
