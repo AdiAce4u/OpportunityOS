@@ -1,7 +1,9 @@
 import React from "react";
 import { MapPin, DollarSign, Check, AlertCircle, ArrowUpRight, Award } from "lucide-react";
 
-export function TopOpportunities({ jobs = [], onSelectJob, onOpenReview, onOpenCustomJD }) {
+export function TopOpportunities({ jobs = [], onSelectJob, onOpenReview, onOpenCustomJD, maxItems }) {
+  const displayJobs = maxItems ? jobs.slice(0, maxItems) : jobs;
+
   return (
     <div className="card" style={{ padding: "20px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
@@ -24,12 +26,12 @@ export function TopOpportunities({ jobs = [], onSelectJob, onOpenReview, onOpenC
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        {jobs.length === 0 ? (
+        {displayJobs.length === 0 ? (
           <div style={{ color: "var(--text-muted)", padding: "20px", textAlign: "center" }}>
             No opportunities shortlisted yet. Run the agent to discover and match roles.
           </div>
         ) : (
-          jobs.slice(0, 4).map((item, idx) => {
+          displayJobs.map((item, idx) => {
             const job = item.job || item;
             const score = item.score || item.match_score || 91;
             const why = item.why_this_job || {};

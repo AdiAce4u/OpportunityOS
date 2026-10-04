@@ -15,36 +15,27 @@ import {
   ShieldCheck,
   Check,
   CheckCircle2,
-  Camera,
   ExternalLink,
   Layers,
   Sparkles,
   Eye,
   RefreshCw,
   Loader2,
-  Chrome,
+  Copy,
 } from "lucide-react";
 import { api } from "../services/api";
 
 export function ApplicationReviewModal({ application, onClose, onApprove, onReject, onProvideMissingInfo }) {
   if (!application) return null;
 
-  const [activeTab, setActiveTab] = useState("resume"); // "resume" | "evidence" | "prefill" | "cover_letter" | "answers" | "research"
+  const [activeTab, setActiveTab] = useState("resume"); // "resume" | "evidence" | "cover_letter" | "answers" | "research"
   const [resumeViewMode, setResumeViewMode] = useState("preview"); // "preview" | "text"
   const [isEditing, setIsEditing] = useState(false);
   const [editedResume, setEditedResume] = useState(application.tailored_resume || "");
   const [editedCoverLetter, setEditedCoverLetter] = useState(application.cover_letter || "");
   const [editedAnswers, setEditedAnswers] = useState(application.answers || {});
   const [submitting, setSubmitting] = useState(false);
-  const [prefilling, setPrefilling] = useState(false);
-  const [prefillSnapshotUrl, setPrefillSnapshotUrl] = useState(
-    application.submission_receipt?.prefill_snapshot_url
-      ? `http://localhost:8000${application.submission_receipt.prefill_snapshot_url}`
-      : null
-  );
-  const [prefillStatus, setPrefillStatus] = useState(
-    application.submission_receipt?.prefill_snapshot_url ? "Portal Form Verified & Snapshot Saved" : null
-  );
+  const [copiedType, setCopiedType] = useState(null);
 
   // Missing info form state
   const [missingInput, setMissingInput] = useState("");
@@ -58,6 +49,18 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
   const missingInfo = application.missing_information || [];
   const evidenceTable = application.evidence_table || why.evidence_table || [];
   const resumePdfUrl = `http://localhost:8000/api/applications/${application.id}/resume-pdf`;
+  const portalUrl = job.url || (job.external_id ? `http://localhost:8000/portal/apply/${job.external_id}` : "http://localhost:8000/portal/apply/job-001");
+
+  const copyToClipboard = (text, type) => {
+    if (!text) return;
+    try {
+      navigator.clipboard.writeText(text);
+      setCopiedType(type);
+      setTimeout(() => setCopiedType(null), 2200);
+    } catch (err) {
+      console.error("Clipboard copy failed", err);
+    }
+  };
 
   const handleApproveSubmit = async () => {
     setSubmitting(true);
@@ -81,23 +84,17 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
     }
   };
 
-  const handlePreparePortal = async () => {
-    setActiveTab("prefill");
-    setPrefilling(true);
-    setPrefillStatus("Launching Playwright Chromium & populating portal form fields...");
+  const handleAcceptAndApply = async () => {
+    // Open portal application URL directly in new tab so user can apply
     try {
-      const res = await api.preparePortalPrefill(application.id);
-      if (res.snapshot_url) {
-        setPrefillSnapshotUrl(`http://localhost:8000${res.snapshot_url}?t=${Date.now()}`);
-        setPrefillStatus("Form fields pre-filled and visual screenshot captured.");
-      } else {
-        setPrefillStatus(res.details || "Portal pre-filled successfully.");
+      if (portalUrl) {
+        window.open(portalUrl, "_blank", "noopener,noreferrer");
       }
-    } catch (err) {
-      setPrefillStatus(`Portal pre-fill preview error: ${err.message}`);
-    } finally {
-      setPrefilling(false);
+    } catch (e) {
+      console.error("Could not open portal link:", e);
     }
+    // Accept & submit application in OpportunityOS
+    await handleApproveSubmit();
   };
 
   const handleMissingSubmit = (e) => {
@@ -153,11 +150,9 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
               <span className="badge badge-success">
                 <Check size={12} /> Eligibility: Verified
               </span>
-              {prefillSnapshotUrl && (
-                <span className="badge badge-primary">
-                  <Camera size={12} /> Pre-Fill Inspected
-                </span>
-              )}
+              <span className="badge badge-primary">
+                <ExternalLink size={12} /> {job.site || "Application Portal"}
+              </span>
             </div>
             <h2 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-primary)" }}>{role}</h2>
             <div style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "2px" }}>
@@ -186,6 +181,62 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
             >
               <X size={22} />
             </button>
+          </div>
+        </div>
+
+        {/* Dedicated Application Portal Link Bar */}
+        <div
+          style={{
+            background: "var(--bg-well)",
+            borderBottom: "1px solid var(--border-subtle)",
+            padding: "11px 28px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "14px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span className="badge badge-primary" style={{ textTransform: "uppercase", fontSize: "11px", fontWeight: "700", whiteSpace: "nowrap" }}>
+              {job.site || "Careers Portal"}
+            </span>
+            <span style={{ fontSize: "13px", color: "var(--text-secondary)", fontWeight: "500" }}>
+              Official Application Portal
+            </span>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <button
+              onClick={() => copyToClipboard(portalUrl, "link_bar")}
+              className="btn btn-secondary"
+              style={{ padding: "5px 12px", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "5px" }}
+              title="Copy application link to clipboard"
+            >
+              {copiedType === "link_bar" ? <Check size={12} color="var(--accent-emerald)" /> : <Copy size={12} />}
+              <span>{copiedType === "link_bar" ? "Copied!" : "Copy Link"}</span>
+            </button>
+
+            <a
+              href={portalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-primary"
+              style={{
+                padding: "6px 14px",
+                fontSize: "12.5px",
+                fontWeight: "700",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                boxShadow: "0 2px 8px rgba(59, 130, 246, 0.25)",
+              }}
+              title="Go to application webpage in a new tab"
+            >
+              <span>Go to Application Link</span>
+              <ExternalLink size={13} />
+            </a>
           </div>
         </div>
 
@@ -245,7 +296,6 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
           {[
             { id: "resume", label: "Tailored Resume", icon: <FileText size={15} /> },
             { id: "evidence", label: "Evidence Citation Table", icon: <Layers size={15} />, badge: evidenceTable.length > 0 ? evidenceTable.length : null },
-            { id: "prefill", label: "Live Chromium Tab", icon: <Chrome size={15} /> },
             { id: "cover_letter", label: "Cover Letter", icon: <Mail size={15} /> },
             { id: "answers", label: "Application Answers", icon: <HelpCircle size={15} /> },
             { id: "research", label: "Company Intelligence", icon: <Building2 size={15} /> },
@@ -287,26 +337,15 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
             </button>
           ))}
 
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center" }}>
             <button
               className="btn btn-secondary"
-              style={{ padding: "6px 12px", fontSize: "12px" }}
+              style={{ padding: "6px 14px", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
               onClick={() => setIsEditing(!isEditing)}
             >
               <Edit3 size={13} />
               <span>{isEditing ? "Done Editing" : "Edit Materials"}</span>
             </button>
-
-            <a
-              href={resumePdfUrl}
-              download={`Tailored_Resume_${company.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`}
-              className="btn btn-secondary"
-              style={{ padding: "6px 12px", fontSize: "12px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
-              title="Download ATS single-page tailored PDF"
-            >
-              <Download size={13} />
-              <span>PDF</span>
-            </a>
           </div>
         </div>
 
@@ -578,194 +617,23 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
             </div>
           )}
 
-          {/* TAB 3: LIVE CHROMIUM TAB PREFILL */}
-          {activeTab === "prefill" && (
-            <div>
-              {/* Architecture & Safety Banner */}
-              <div
-                style={{
-                  background: "var(--bg-card-subtle)",
-                  padding: "14px 18px",
-                  borderRadius: "8px",
-                  border: "1px solid var(--border-subtle)",
-                  marginBottom: "16px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: "16px",
-                  flexWrap: "wrap",
-                }}
-              >
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <Chrome size={16} color="var(--accent-cyan-text)" />
-                    <span style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-primary)" }}>
-                      Live Chromium Tab (Multi-Tab Enabled)
-                    </span>
-                    <span className="badge badge-primary" style={{ fontSize: "10.5px" }}>HUMAN APPLICATION GATE</span>
-                  </div>
-                  <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px", maxWidth: "620px" }}>
-                    Playwright opens a dedicated new tab in your Chromium browser window, auto-fills all your candidate facts, attaches your tailored single-page ATS PDF, and leaves the tab open so you can review and hit the Apply button yourself.
-                  </p>
-                </div>
-
-                <button
-                  className="btn btn-primary"
-                  onClick={handlePreparePortal}
-                  disabled={prefilling}
-                  style={{ whiteSpace: "nowrap", fontSize: "12.5px", padding: "8px 16px", display: "inline-flex", alignItems: "center", gap: "6px" }}
-                >
-                  {prefilling ? <Loader2 size={14} className="animate-spin" /> : <Chrome size={14} />}
-                  <span>{prefilling ? "Opening Chromium Tab..." : "Open in Chromium & Pre-Fill"}</span>
-                </button>
-              </div>
-
-              {/* In-progress loading state */}
-              {prefilling && (
-                <div
-                  style={{
-                    border: "1px solid var(--border-subtle)",
-                    borderRadius: "10px",
-                    padding: "36px 20px",
-                    textAlign: "center",
-                    background: "var(--bg-card-subtle)",
-                    marginBottom: "16px",
-                  }}
-                >
-                  <Loader2 size={36} className="animate-spin" color="var(--primary)" style={{ margin: "0 auto 12px" }} />
-                  <h4 style={{ fontSize: "15px", fontWeight: "700", color: "var(--text-primary)", marginBottom: "6px" }}>
-                    Opening New Tab in Chromium Browser...
-                  </h4>
-                  <p style={{ fontSize: "12.5px", color: "var(--text-secondary)", maxWidth: "500px", margin: "0 auto" }}>
-                    Launching/connecting to Chromium window, opening a dedicated tab for {company}, populating candidate fields, attaching tailored ATS PDF, and capturing snapshot...
-                  </p>
-                </div>
-              )}
-
-              {/* Screenshot & Active Tab Display */}
-              {!prefilling && prefillSnapshotUrl && (
-                <div
-                  style={{
-                    background: "var(--bg-card-subtle)",
-                    border: "1px solid var(--border-subtle)",
-                    borderRadius: "10px",
-                    overflow: "hidden",
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: "10px 16px",
-                      background: "var(--bg-well)",
-                      borderBottom: "1px solid var(--border-subtle)",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      fontSize: "12px",
-                      color: "var(--text-secondary)",
-                      flexWrap: "wrap",
-                      gap: "8px",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span className="badge badge-success" style={{ fontSize: "11px" }}>
-                        <Check size={11} /> Pre-Filled in Chromium Tab
-                      </span>
-                      <span>Playwright Live Viewport Snapshot</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                      <a
-                        href={job.url || `http://localhost:8000/portal/apply/${job.external_id || "job-001"}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: "var(--primary)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: "600" }}
-                        title="Open portal URL directly"
-                      >
-                        <ExternalLink size={12} /> Portal Webpage
-                      </a>
-                      <a
-                        href={prefillSnapshotUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: "var(--accent-cyan-text)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: "600" }}
-                      >
-                        <ExternalLink size={12} /> Open Snapshot
-                      </a>
-                    </div>
-                  </div>
-
-                  <div style={{ padding: "16px", display: "grid", placeItems: "center", maxHeight: "420px", overflowY: "auto", background: "var(--bg-well)" }}>
-                    <img
-                      src={prefillSnapshotUrl}
-                      alt="Portal Pre-Fill Snapshot"
-                      style={{
-                        width: "100%",
-                        maxWidth: "850px",
-                        borderRadius: "6px",
-                        border: "1px solid var(--border-subtle)",
-                        boxShadow: "var(--card-shadow)",
-                      }}
-                    />
-                  </div>
-
-                  <div
-                    style={{
-                      padding: "12px 16px",
-                      background: "var(--bg-well)",
-                      borderTop: "1px solid var(--border-subtle)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      fontSize: "12.5px",
-                      color: "var(--text-primary)",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <ShieldCheck size={16} color="var(--accent-emerald)" />
-                      <span>
-                        <strong style={{ color: "var(--text-primary)" }}>Chromium tab is open on your screen:</strong> Switch to your Chromium window to review details, and <strong>hit the Apply button yourself</strong>! Our background listener will automatically record the confirmation receipt.
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* No snapshot yet placeholder */}
-              {!prefilling && !prefillSnapshotUrl && (
-                <div
-                  style={{
-                    border: "2px dashed var(--border-subtle)",
-                    borderRadius: "10px",
-                    padding: "44px 20px",
-                    textAlign: "center",
-                    background: "var(--bg-card-subtle)",
-                  }}
-                >
-                  <Chrome size={42} color="var(--accent-cyan-text)" style={{ margin: "0 auto 12px" }} />
-                  <h4 style={{ fontSize: "15px", fontWeight: "700", color: "var(--text-primary)", marginBottom: "4px" }}>
-                    Ready to Open in Chromium Browser
-                  </h4>
-                  <p style={{ fontSize: "12.5px", color: "var(--text-secondary)", maxWidth: "480px", margin: "0 auto 18px", lineHeight: "1.5" }}>
-                    Click below to open a new tab of this job's application webpage in Chromium. OpportunityOS will auto-populate all candidate inputs, attach your single-page tailored PDF, and leave the tab open so you can hit Apply.
-                  </p>
-                  <button
-                    className="btn btn-primary"
-                    onClick={handlePreparePortal}
-                    disabled={prefilling}
-                    style={{ fontSize: "13px", padding: "9px 20px", display: "inline-flex", alignItems: "center", gap: "7px" }}
-                  >
-                    <Chrome size={15} />
-                    <span>Open in Chromium & Pre-Fill Now</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* TAB 4: COVER LETTER */}
           {activeTab === "cover_letter" && (
             <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <span style={{ fontSize: "12.5px", color: "var(--text-secondary)" }}>
+                  Tailored narrative highlighting verified achievements matching {company}'s requirements.
+                </span>
+                <button
+                  onClick={() => copyToClipboard(editedCoverLetter, "tab_cover_letter")}
+                  className="btn btn-secondary"
+                  style={{ padding: "5px 12px", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  {copiedType === "tab_cover_letter" ? <Check size={13} color="var(--accent-emerald)" /> : <Copy size={13} />}
+                  <span>{copiedType === "tab_cover_letter" ? "Copied Cover Letter!" : "Copy Cover Letter"}</span>
+                </button>
+              </div>
+
               {isEditing ? (
                 <textarea
                   className="textarea"
@@ -795,6 +663,25 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
           {/* TAB 5: ANSWERS */}
           {activeTab === "answers" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "12.5px", color: "var(--text-secondary)" }}>
+                  Pre-computed screening answers aligned with candidate ground truth.
+                </span>
+                <button
+                  onClick={() => {
+                    const answersText = Object.entries(editedAnswers)
+                      .map(([k, v]) => `${k.toUpperCase().replace(/_/g, " ")}:\n${v}`)
+                      .join("\n\n");
+                    copyToClipboard(answersText, "tab_answers");
+                  }}
+                  className="btn btn-secondary"
+                  style={{ padding: "5px 12px", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  {copiedType === "tab_answers" ? <Check size={13} color="var(--accent-emerald)" /> : <Copy size={13} />}
+                  <span>{copiedType === "tab_answers" ? "Copied All Answers!" : "Copy All Q&A"}</span>
+                </button>
+              </div>
+
               {Object.entries(editedAnswers).map(([k, v]) => (
                 <div key={k} style={{ background: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", padding: "16px", borderRadius: "8px" }}>
                   <div style={{ fontSize: "12px", fontWeight: "700", color: "var(--primary)", textTransform: "uppercase", marginBottom: "6px" }}>
@@ -868,24 +755,17 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
           }}
         >
-          <div style={{ fontSize: "12.5px", color: "var(--text-muted)" }}>
-            {prefillStatus || "Browser automation will only execute with your explicit authorization."}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontSize: "12.5px", color: "var(--text-muted)" }}>
+              Official job portal · Tailored materials ready to attach
+            </span>
           </div>
 
           <div style={{ display: "flex", gap: "12px" }}>
-            <button
-              className="btn btn-secondary"
-              disabled={prefilling || submitting}
-              onClick={handlePreparePortal}
-              title="Opens a new tab in Chromium, fills all details and attaches CV, leaving it open so you can hit Apply"
-              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
-            >
-              {prefilling ? <Loader2 size={14} className="animate-spin" /> : <Chrome size={14} color="var(--accent-cyan-text)" />}
-              <span>{prefilling ? "Opening Tab..." : "Open in Chromium & Pre-Fill"}</span>
-            </button>
-
             <button
               className="btn btn-danger"
               disabled={submitting}
@@ -898,10 +778,12 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
             <button
               className="btn btn-success"
               disabled={submitting || missingInfo.length > 0}
-              onClick={handleApproveSubmit}
+              onClick={handleAcceptAndApply}
+              style={{ display: "inline-flex", alignItems: "center", gap: "7px", fontSize: "13px", padding: "8px 20px", fontWeight: "700" }}
+              title="Accept application, open portal in new tab, and track in pipeline"
             >
-              <Send size={15} />
-              <span>{submitting ? "Launching Browser Agent..." : "Approve & Submit"}</span>
+              {submitting ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+              <span>{submitting ? "Opening Portal & Submitting..." : "Accept and Apply"}</span>
             </button>
           </div>
         </div>

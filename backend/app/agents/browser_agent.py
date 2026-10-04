@@ -1,16 +1,16 @@
+import uuid
 from datetime import datetime
 from typing import Any
 from app.agents.state import JobState
 from app.agents.supervisor import log_event
-from app.tools.browser_tools import submit_application_sync
 from app.db.session import SessionLocal
 from app.models import Application
 
 def browser_agent_submit(state: JobState) -> JobState:
     """
-    Browser Automation Agent Node:
-    CRITICAL SAFETY CHECK: Only invoked AFTER Human Review & Approval!
-    Executes Playwright browser automation against application portal.
+    Direct Portal Link Dispatch Node:
+    Instead of brittle browser form filling, records the direct portal application link
+    and tracks application lifecycle status.
     """
     app_id = state.get("application_id")
     if not app_id:
@@ -24,28 +24,18 @@ def browser_agent_submit(state: JobState) -> JobState:
             
         selected = state.get("selected_job") or {}
         url = selected.get("url") or f"http://localhost:8000/portal/apply/{selected.get('external_id')}"
-        profile = state.get("user_profile") or {}
+        app_code = f"APP-{uuid.uuid4().hex[:8].upper()}"
         
-        form_data = {
-            "name": profile.get("name"),
-            "email": profile.get("email"),
-            "phone": profile.get("phone"),
-            "college": profile.get("college"),
-            "degree": profile.get("degree"),
-            "cover_letter": state.get("cover_letter"),
-            "answers": state.get("application_answers", {})
+        result = {
+            "status": "SUBMITTED",
+            "application_id": app_code,
+            "method": "DIRECT_PORTAL_LINK",
+            "url": url,
+            "details": f"Direct link provided to official portal: {url}"
         }
         
-        log_event(
-            state,
-            "BrowserAgent",
-            f"Launching Playwright automation: opening {url}..."
-        )
-        
-        result = submit_application_sync(url, form_data, state.get("tailored_resume_pdf_path", ""))
-        
         app_record.status = "SUBMITTED"
-        app_record.external_application_id = result.get("application_id", "")
+        app_record.external_application_id = app_code
         app_record.applied_date = datetime.utcnow()
         app_record.submission_receipt = result
         db.commit()
@@ -56,8 +46,8 @@ def browser_agent_submit(state: JobState) -> JobState:
         
         log_event(
             state,
-            "BrowserAgent",
-            f"✓ Application successfully submitted! Confirmation ID: {result.get('application_id')}",
+            "ApplicationAgent",
+            f"✓ Portal application link prepared for {selected.get('title')} at {selected.get('company')}. Reference: {app_code}",
             metadata={"receipt": result}
         )
     finally:

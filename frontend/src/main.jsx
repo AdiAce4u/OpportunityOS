@@ -382,6 +382,7 @@ function OpportunityOSApp() {
               <div className="split-grid">
                 <TopOpportunities
                   jobs={applications.length > 0 ? applications : jobs}
+                  maxItems={4}
                   onOpenCustomJD={() => setIsCustomJDOpen(true)}
                   onSelectJob={(job) => handleTailorJobFromAnywhere(job)}
                   onOpenReview={(job) => {
@@ -446,53 +447,6 @@ function OpportunityOSApp() {
                 applications={applications}
                 onOpenApplication={handleOpenApplication}
               />
-            </div>
-          )}
-
-          {/* TAB: DISCOVERED JOBS */}
-          {currentTab === "opportunities" && (
-            <div>
-              <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <h2 style={{ fontSize: "24px", fontWeight: "800", color: "var(--text-primary)" }}>
-                    Discovered Opportunities Repository
-                  </h2>
-                  <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                    All open positions discovered from LinkedIn, Wellfound, Indeed, and Glassdoor.
-                  </p>
-                </div>
-                <button className="btn btn-primary" onClick={() => setTab("portal_discovery")}>
-                  <Globe size={15} /> Search More Portals
-                </button>
-              </div>
-              <TopOpportunities
-                jobs={jobs}
-                onOpenCustomJD={() => setIsCustomJDOpen(true)}
-                onSelectJob={(job) => handleTailorJobFromAnywhere(job)}
-                onOpenReview={(job) => {
-                  const matched = applications.find((a) => a.job_id === job.id);
-                  if (matched) handleOpenApplication(matched.id);
-                  else handleTailorJobFromAnywhere(job);
-                }}
-              />
-            </div>
-          )}
-
-          {/* TAB: PIPELINE */}
-          {currentTab === "pipeline" && (
-            <div>
-              <div style={{ marginBottom: "24px" }}>
-                <h2 style={{ fontSize: "24px", fontWeight: "800", color: "var(--text-primary)" }}>
-                  Multi-Agent Orchestration Pipeline
-                </h2>
-                <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
-                  LangGraph workflow orchestration connecting the 9 specialized agents.
-                </p>
-              </div>
-              <AgentPipeline />
-              <div style={{ marginTop: "24px" }}>
-                <AgentActivityLog logs={logs} running={running} />
-              </div>
             </div>
           )}
 

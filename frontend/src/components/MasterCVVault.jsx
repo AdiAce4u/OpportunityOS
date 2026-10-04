@@ -30,13 +30,13 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
   const projects = profile?.categorized_projects || profile?.projects || [];
 
   const domainIcons = {
-    sde: <Code2 size={16} color="#60a5fa" />,
-    data: <Database size={16} color="#c084fc" />,
-    core: <Cpu size={16} color="#34d399" />,
-    product: <Compass size={16} color="#fbbf24" />,
-    consult: <Briefcase size={16} color="#f472b6" />,
-    finance: <DollarSign size={16} color="#38bdf8" />,
-    general: <Layers size={16} color="#94a3b8" />,
+    sde: <Code2 size={16} color="var(--primary)" />,
+    data: <Database size={16} color="var(--accent-indigo-text)" />,
+    core: <Cpu size={16} color="var(--accent-emerald-text)" />,
+    product: <Compass size={16} color="var(--accent-amber-text)" />,
+    consult: <Briefcase size={16} color="var(--accent-rose-text)" />,
+    finance: <DollarSign size={16} color="var(--accent-cyan-text)" />,
+    general: <Layers size={16} color="var(--text-muted)" />,
   };
 
   const domainLabels = {
@@ -50,13 +50,13 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
   };
 
   const domainColors = {
-    sde: { bg: "#1e3a8a33", text: "#93c5fd", border: "#1d4ed8" },
-    data: { bg: "#581c8733", text: "#e9d5ff", border: "#7e22ce" },
-    core: { bg: "#064e3b33", text: "#6ee7b7", border: "#047857" },
-    product: { bg: "#78350f33", text: "#fde68a", border: "#b45309" },
-    consult: { bg: "#83184333", text: "#fbcfe8", border: "#be185d" },
-    finance: { bg: "#0c4a6e33", text: "#7dd3fc", border: "#0369a1" },
-    general: { bg: "#1e293b33", text: "#cbd5e1", border: "#334155" },
+    sde: { bg: "var(--primary-subtle)", text: "var(--primary-text)", border: "var(--border-active)" },
+    data: { bg: "var(--accent-indigo-subtle)", text: "var(--accent-indigo-text)", border: "var(--accent-indigo-border)" },
+    core: { bg: "var(--accent-emerald-subtle)", text: "var(--accent-emerald-text)", border: "var(--accent-emerald-border)" },
+    product: { bg: "var(--accent-amber-subtle)", text: "var(--accent-amber-text)", border: "var(--accent-amber-border)" },
+    consult: { bg: "var(--accent-rose-subtle)", text: "var(--accent-rose-text)", border: "var(--accent-rose-border)" },
+    finance: { bg: "var(--accent-cyan-subtle)", text: "var(--accent-cyan-text)", border: "var(--accent-cyan-border)" },
+    general: { bg: "var(--bg-card-subtle)", text: "var(--text-secondary)", border: "var(--border-subtle)" },
   };
 
   const filteredProjects =
@@ -114,8 +114,8 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
       {/* Header Banner */}
       <div
         style={{
-          background: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0c1527 100%)",
-          border: "1px solid #312e81",
+          background: "linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-subtle) 100%)",
+          border: "1px solid var(--border-subtle)",
           borderRadius: "16px",
           padding: "24px 28px",
           display: "flex",
@@ -123,14 +123,16 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
           alignItems: "center",
           flexWrap: "wrap",
           gap: "16px",
+          boxShadow: "var(--card-shadow)",
         }}
       >
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
             <span
               style={{
-                background: "rgba(99, 102, 241, 0.2)",
-                color: "#a5b4fc",
+                background: "var(--primary-subtle)",
+                color: "var(--primary-text)",
+                border: "1px solid var(--border-active)",
                 padding: "2px 8px",
                 borderRadius: "6px",
                 fontSize: "11px",
@@ -141,13 +143,13 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
             >
               Master CV & Domain Vault
             </span>
-            <span style={{ fontSize: "12px", color: "#64748b" }}>• Ground Truth Knowledge Base</span>
+            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>• Ground Truth Knowledge Base</span>
           </div>
-          <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#ffffff" }}>
+          <h2 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-primary)" }}>
             {profile?.name || "Candidate"}’s Comprehensive Multi-Domain Portfolio
           </h2>
-          <p style={{ fontSize: "13px", color: "#94a3b8", marginTop: "4px" }}>
-            Contains all projects across SDE, Data & AI, Core Engineering, Product, and Finance. The agent segregrates the best projects for each specific job description.
+          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
+            Contains all projects across SDE, Data & AI, Core Engineering, Product, and Finance. The agent segregates the best projects for each specific job description.
           </p>
         </div>
 
@@ -188,18 +190,18 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
       >
         <div
           style={{
-            border: "2px dashed #2e3856",
+            border: "2px dashed var(--border-active)",
             borderRadius: "12px",
             padding: "20px",
             textAlign: "center",
-            background: "#080c16",
+            background: "var(--bg-card-subtle)",
           }}
         >
-          <Upload size={28} color="#818cf8" style={{ margin: "0 auto 8px" }} />
-          <h4 style={{ fontSize: "14px", fontWeight: "700", color: "#ffffff" }}>
+          <Upload size={28} color="var(--primary)" style={{ margin: "0 auto 8px" }} />
+          <h4 style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-primary)" }}>
             Upload Master CV (.md, .txt, .pdf)
           </h4>
-          <p style={{ fontSize: "12px", color: "#64748b", margin: "4px 0 12px" }}>
+          <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "4px 0 12px" }}>
             Upload your complete CV with all multi-domain projects.
           </p>
           <label className="btn btn-secondary" style={{ cursor: "pointer", display: "inline-flex" }}>
@@ -215,31 +217,31 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
         </div>
 
         <div>
-          <h4 style={{ fontSize: "13.5px", fontWeight: "700", color: "#e2e8f0", marginBottom: "8px" }}>
+          <h4 style={{ fontSize: "13.5px", fontWeight: "700", color: "var(--text-primary)", marginBottom: "8px" }}>
             Master Profile Metrics
           </h4>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px" }}>
-            <div style={{ background: "#080c16", padding: "10px 14px", borderRadius: "8px", border: "1px solid #1e293b" }}>
-              <div style={{ fontSize: "11px", color: "#64748b" }}>Total Projects Cataloged</div>
-              <div style={{ fontSize: "18px", fontWeight: "800", color: "#38bdf8", marginTop: "2px" }}>
+            <div style={{ background: "var(--bg-card-subtle)", padding: "12px 14px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+              <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Total Projects Cataloged</div>
+              <div style={{ fontSize: "18px", fontWeight: "800", color: "var(--primary-text)", marginTop: "2px" }}>
                 {projects.length}
               </div>
             </div>
-            <div style={{ background: "#080c16", padding: "10px 14px", borderRadius: "8px", border: "1px solid #1e293b" }}>
-              <div style={{ fontSize: "11px", color: "#64748b" }}>Institution & Degree</div>
-              <div style={{ fontSize: "12.5px", fontWeight: "700", color: "#f8fafc", marginTop: "4px" }}>
+            <div style={{ background: "var(--bg-card-subtle)", padding: "12px 14px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+              <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Institution & Degree</div>
+              <div style={{ fontSize: "12.5px", fontWeight: "700", color: "var(--text-primary)", marginTop: "4px" }}>
                 {profile?.college || "IIT Kharagpur"}
               </div>
             </div>
-            <div style={{ background: "#080c16", padding: "10px 14px", borderRadius: "8px", border: "1px solid #1e293b" }}>
-              <div style={{ fontSize: "11px", color: "#64748b" }}>Skills Extracted</div>
-              <div style={{ fontSize: "18px", fontWeight: "800", color: "#a855f7", marginTop: "2px" }}>
+            <div style={{ background: "var(--bg-card-subtle)", padding: "12px 14px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+              <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Skills Extracted</div>
+              <div style={{ fontSize: "18px", fontWeight: "800", color: "var(--accent-indigo-text)", marginTop: "2px" }}>
                 {profile?.skills?.length || 0}
               </div>
             </div>
-            <div style={{ background: "#080c16", padding: "10px 14px", borderRadius: "8px", border: "1px solid #1e293b" }}>
-              <div style={{ fontSize: "11px", color: "#64748b" }}>CGPA / Graduation</div>
-              <div style={{ fontSize: "12.5px", fontWeight: "700", color: "#34d399", marginTop: "4px" }}>
+            <div style={{ background: "var(--bg-card-subtle)", padding: "12px 14px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+              <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>CGPA / Graduation</div>
+              <div style={{ fontSize: "12.5px", fontWeight: "700", color: "var(--accent-emerald-text)", marginTop: "4px" }}>
                 {profile?.cgpa || 8.39} / 10 ({profile?.graduation_year || 2028})
               </div>
             </div>
@@ -252,9 +254,9 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
           style={{
             padding: "12px 18px",
             borderRadius: "10px",
-            background: uploadStatus.type === "error" ? "#450a0a" : "#022c22",
-            border: `1px solid ${uploadStatus.type === "error" ? "#ef4444" : "#10b981"}`,
-            color: uploadStatus.type === "error" ? "#fca5a5" : "#6ee7b7",
+            background: uploadStatus.type === "error" ? "var(--accent-rose-subtle)" : "var(--accent-emerald-subtle)",
+            border: `1px solid ${uploadStatus.type === "error" ? "var(--accent-rose-border)" : "var(--accent-emerald-border)"}`,
+            color: uploadStatus.type === "error" ? "var(--accent-rose-text)" : "var(--accent-emerald-text)",
             fontSize: "13px",
             fontWeight: "600",
             display: "flex",
@@ -269,10 +271,10 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
       {/* Domain Category Filter Tabs */}
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-          <h3 style={{ fontSize: "16px", fontWeight: "800", color: "#f8fafc" }}>
+          <h3 style={{ fontSize: "16px", fontWeight: "800", color: "var(--text-primary)" }}>
             Categorized Project Catalog ({filteredProjects.length})
           </h3>
-          <span style={{ fontSize: "12px", color: "#64748b" }}>
+          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
             Click any domain to inspect segregated projects
           </span>
         </div>
@@ -291,9 +293,9 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
                   gap: "8px",
                   padding: "8px 14px",
                   borderRadius: "10px",
-                  border: isActive ? "1px solid #6366f1" : "1px solid #1e293b",
-                  background: isActive ? "#1e1b4b" : "#080c16",
-                  color: isActive ? "#ffffff" : "#94a3b8",
+                  border: isActive ? "1px solid var(--border-active)" : "1px solid var(--border-subtle)",
+                  background: isActive ? "var(--primary-subtle)" : "var(--bg-card-subtle)",
+                  color: isActive ? "var(--primary-text)" : "var(--text-secondary)",
                   fontSize: "12.5px",
                   fontWeight: isActive ? "700" : "500",
                   cursor: "pointer",
@@ -304,12 +306,13 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
                 <span>{domainLabels[dKey]}</span>
                 <span
                   style={{
-                    background: isActive ? "#4338ca" : "#1e293b",
-                    color: isActive ? "#ffffff" : "#94a3b8",
+                    background: isActive ? "var(--primary)" : "var(--bg-card)",
+                    color: isActive ? "#ffffff" : "var(--text-muted)",
                     padding: "1px 6px",
                     borderRadius: "10px",
                     fontSize: "10.5px",
                     fontWeight: "800",
+                    border: "1px solid var(--border-subtle)",
                   }}
                 >
                   {count}
@@ -334,12 +337,12 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  transition: "transform 0.15s ease",
+                  transition: "all 0.15s ease",
                 }}
               >
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px", gap: "8px" }}>
-                    <h4 style={{ fontSize: "14.5px", fontWeight: "700", color: "#ffffff", lineHeight: "1.4" }}>
+                    <h4 style={{ fontSize: "14.5px", fontWeight: "700", color: "var(--text-primary)", lineHeight: "1.4" }}>
                       {p.name}
                     </h4>
                     <span
@@ -363,15 +366,15 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
                     </span>
                   </div>
 
-                  <p style={{ fontSize: "12.5px", color: "#94a3b8", lineHeight: "1.5", marginBottom: "12px" }}>
+                  <p style={{ fontSize: "12.5px", color: "var(--text-secondary)", lineHeight: "1.5", marginBottom: "12px" }}>
                     {p.description || (p.bullets && p.bullets[0]) || "Multi-disciplinary engineering project."}
                   </p>
 
                   {/* Bullets */}
                   {p.bullets && p.bullets.length > 1 && (
-                    <div style={{ borderLeft: "2px solid #1e293b", paddingLeft: "10px", marginBottom: "12px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <div style={{ borderLeft: "2px solid var(--border-active)", paddingLeft: "10px", marginBottom: "12px", display: "flex", flexDirection: "column", gap: "4px" }}>
                       {p.bullets.slice(0, 2).map((b, bIdx) => (
-                        <div key={bIdx} style={{ fontSize: "11.5px", color: "#cbd5e1", lineHeight: "1.4" }}>
+                        <div key={bIdx} style={{ fontSize: "11.5px", color: "var(--text-secondary)", lineHeight: "1.4" }}>
                           • {b}
                         </div>
                       ))}
@@ -386,9 +389,9 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
                       <span
                         key={tIdx}
                         style={{
-                          background: "#080c16",
-                          color: "#94a3b8",
-                          border: "1px solid #1e293b",
+                          background: "var(--bg-card-subtle)",
+                          color: "var(--text-secondary)",
+                          border: "1px solid var(--border-subtle)",
                           padding: "2px 6px",
                           borderRadius: "4px",
                           fontSize: "10.5px",

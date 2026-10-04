@@ -1,9 +1,6 @@
-import React from "react";
 import {
   LayoutDashboard,
-  GitFork,
   FileCheck,
-  Briefcase,
   User,
   GraduationCap,
   ShieldCheck,
@@ -36,8 +33,6 @@ export function Sidebar({ currentTab, setTab, awaitingCount, interviewCount, pro
       badge: awaitingCount > 0 ? awaitingCount : null,
       badgeColor: "#f59e0b",
     },
-    { id: "opportunities", label: "Discovered Jobs", icon: <Briefcase size={18} /> },
-    { id: "pipeline", label: "Agent Pipeline", icon: <GitFork size={18} /> },
     { id: "profile", label: "Profile & Ground Truth", icon: <User size={18} /> },
     {
       id: "interview",

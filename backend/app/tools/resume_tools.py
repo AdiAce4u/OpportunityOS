@@ -321,7 +321,7 @@ def tailor_resume(job: dict[str, Any], user_profile: dict[str, Any], raw_resume:
         "",
         "VERIFIED TECHNICAL SKILLS",
         f"• Core Matched Competencies: {', '.join(matched_skills) if matched_skills else 'Engineering Fundamentals'}",
-        f"• Additional Tools & Frameworks: {', '.join(other_skills[:6])}",
+        f"• Additional Tools & Frameworks: {', '.join(other_skills)}",
         "",
         "FEATURED DOMAIN-ALIGNED PROJECTS (ATS ACTION-RESULT)"
     ]

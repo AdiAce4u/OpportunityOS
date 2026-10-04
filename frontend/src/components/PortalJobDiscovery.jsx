@@ -30,11 +30,11 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
 
   // The 5 Tracks
   const tracks = [
-    { id: "software", label: "Software (SDE, Backend, Full Stack, DevOps)", icon: <Code2 size={16} color="#60a5fa" />, countLabel: "SDE" },
-    { id: "data", label: "Data (Data Science, ML, AI, Analytics)", icon: <Database size={16} color="#c084fc" />, countLabel: "Data" },
-    { id: "consult", label: "Consult (Management, Strategy, Business Analyst)", icon: <Briefcase size={16} color="#f472b6" />, countLabel: "Consult" },
-    { id: "finance", label: "Finance (Quantitative Analyst, Risk, Fintech)", icon: <TrendingUp size={16} color="#38bdf8" />, countLabel: "Finance" },
-    { id: "core", label: "Core (Robotics, Embedded, Hardware, Mechanical)", icon: <Cpu size={16} color="#34d399" />, countLabel: "Core" },
+    { id: "software", label: "Software (SDE, Backend, Full Stack, DevOps)", icon: <Code2 size={16} color="var(--primary)" />, countLabel: "SDE" },
+    { id: "data", label: "Data (Data Science, ML, AI, Analytics)", icon: <Database size={16} color="var(--accent-indigo-text)" />, countLabel: "Data" },
+    { id: "consult", label: "Consult (Management, Strategy, Business Analyst)", icon: <Briefcase size={16} color="var(--accent-rose-text)" />, countLabel: "Consult" },
+    { id: "finance", label: "Finance (Quantitative Analyst, Risk, Fintech)", icon: <TrendingUp size={16} color="var(--accent-cyan-text)" />, countLabel: "Finance" },
+    { id: "core", label: "Core (Robotics, Embedded, Hardware, Mechanical)", icon: <Cpu size={16} color="var(--accent-emerald-text)" />, countLabel: "Core" },
   ];
 
   const portalsList = [
@@ -117,17 +117,19 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
       {/* Search Header Banner */}
       <div
         style={{
-          background: "linear-gradient(135deg, #090e1a 0%, #1e1b4b 60%, #0f172a 100%)",
-          border: "1px solid #3730a3",
+          background: "linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-subtle) 100%)",
+          border: "1px solid var(--border-subtle)",
           borderRadius: "16px",
           padding: "24px 28px",
+          boxShadow: "var(--card-shadow)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
           <span
             style={{
-              background: "rgba(99, 102, 241, 0.2)",
-              color: "#a5b4fc",
+              background: "var(--primary-subtle)",
+              color: "var(--primary-text)",
+              border: "1px solid var(--border-active)",
               padding: "2px 8px",
               borderRadius: "6px",
               fontSize: "11px",
@@ -138,12 +140,12 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
           >
             Autonomous Discovery Engine
           </span>
-          <span style={{ fontSize: "12px", color: "#64748b" }}>• Multi-Portal Search</span>
+          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>• Multi-Portal Search</span>
         </div>
-        <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#ffffff" }}>
+        <h2 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-primary)" }}>
           Multi-Portal Job Discovery & CV Project Matcher
         </h2>
-        <p style={{ fontSize: "13px", color: "#94a3b8", marginTop: "4px" }}>
+        <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
           Select any of the 5 tracks (Software, Data, Consult, Finance, Core) to view all current job openings from LinkedIn, Wellfound, Indeed, and Glassdoor scored against your Master CV.
         </p>
 
@@ -162,9 +164,9 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
                   gap: "7px",
                   padding: "7px 14px",
                   borderRadius: "8px",
-                  border: isSelected ? "1px solid #818cf8" : "1px solid #2a3854",
-                  background: isSelected ? "#312e81" : "#0d1322",
-                  color: isSelected ? "#ffffff" : "#94a3b8",
+                  border: isSelected ? "1px solid var(--border-active)" : "1px solid var(--border-subtle)",
+                  background: isSelected ? "var(--primary-subtle)" : "var(--bg-card-subtle)",
+                  color: isSelected ? "var(--primary-text)" : "var(--text-secondary)",
                   fontSize: "12.5px",
                   fontWeight: isSelected ? "700" : "500",
                   cursor: "pointer",
@@ -186,16 +188,16 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
             
             {/* 5-Track Dropdown */}
             <div>
-              <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#818cf8", marginBottom: "6px" }}>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "var(--primary-text)", marginBottom: "6px" }}>
                 Target Job Profile (5 Tracks)
               </label>
               <select
                 className="input"
                 style={{
                   fontWeight: "700",
-                  color: "#ffffff",
-                  background: "#080c16",
-                  border: "1px solid #4338ca",
+                  color: "var(--text-primary)",
+                  background: "var(--bg-input)",
+                  border: "1px solid var(--border-subtle)",
                   fontSize: "13.5px",
                 }}
                 value={selectedTrack}
@@ -211,7 +213,7 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
 
             {/* Location Input */}
             <div>
-              <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#94a3b8", marginBottom: "6px" }}>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "var(--text-secondary)", marginBottom: "6px" }}>
                 Location / City
               </label>
               <input
@@ -220,18 +222,20 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="India, Bangalore, Remote..."
+                style={{ background: "var(--bg-input)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)" }}
               />
             </div>
 
             {/* Results Count */}
             <div>
-              <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#94a3b8", marginBottom: "6px" }}>
+              <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "var(--text-secondary)", marginBottom: "6px" }}>
                 Max Results to Display
               </label>
               <select
                 className="input"
                 value={resultsCount}
                 onChange={(e) => setResultsCount(e.target.value)}
+                style={{ background: "var(--bg-input)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)" }}
               >
                 <option value={10}>10 Opportunities</option>
                 <option value={15}>15 Opportunities</option>
@@ -242,9 +246,9 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
           </div>
 
           {/* Portals Selectors & Remote Toggle */}
-          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "12px", paddingTop: "8px", borderTop: "1px solid #1e293b" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "12px", paddingTop: "8px", borderTop: "1px solid var(--border-subtle)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-              <span style={{ fontSize: "12px", color: "#64748b", fontWeight: "600" }}>Portals:</span>
+              <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: "600" }}>Portals:</span>
               {portalsList.map((portal) => {
                 const isChecked = selectedSites.includes(portal.id);
                 return (
@@ -258,21 +262,22 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
                       gap: "6px",
                       padding: "4px 10px",
                       borderRadius: "6px",
-                      border: isChecked ? `1px solid ${portal.color}` : "1px solid #1e293b",
-                      background: isChecked ? `${portal.color}22` : "#080c16",
-                      color: isChecked ? "#ffffff" : "#64748b",
+                      border: isChecked ? `1px solid ${portal.color}` : "1px solid var(--border-subtle)",
+                      background: isChecked ? "var(--bg-card-hover)" : "var(--bg-card-subtle)",
+                      color: isChecked ? "var(--text-primary)" : "var(--text-muted)",
                       fontSize: "11.5px",
                       fontWeight: "600",
                       cursor: "pointer",
+                      transition: "all 0.15s ease",
                     }}
                   >
-                    <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: isChecked ? portal.color : "#475569" }} />
+                    <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: isChecked ? portal.color : "var(--text-muted)" }} />
                     {portal.label}
                   </button>
                 );
               })}
 
-              <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#cbd5e1", cursor: "pointer", marginLeft: "10px" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "var(--text-secondary)", cursor: "pointer", marginLeft: "10px" }}>
                 <input
                   type="checkbox"
                   checked={isRemote}
@@ -300,9 +305,9 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
               marginTop: "14px",
               padding: "10px 16px",
               borderRadius: "8px",
-              background: "#080c16",
-              border: "1px solid #1e293b",
-              color: statusMessage.includes("✓") ? "#34d399" : "#a5b4fc",
+              background: "var(--bg-card-subtle)",
+              border: "1px solid var(--border-subtle)",
+              color: statusMessage.includes("✓") ? "var(--accent-emerald-text)" : "var(--primary-text)",
               fontSize: "12.5px",
               fontWeight: "600",
             }}
@@ -316,10 +321,10 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
           <div>
-            <h3 style={{ fontSize: "17px", fontWeight: "800", color: "#ffffff" }}>
+            <h3 style={{ fontSize: "17px", fontWeight: "800", color: "var(--text-primary)" }}>
               {selectedTrack.toUpperCase()} Openings ({discoveredJobs.length})
             </h3>
-            <p style={{ fontSize: "12.5px", color: "#94a3b8" }}>
+            <p style={{ fontSize: "12.5px", color: "var(--text-secondary)" }}>
               All currently available roles ranked by Master CV project similarity.
             </p>
           </div>
@@ -327,7 +332,7 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
 
         <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           {discoveredJobs.length === 0 ? (
-            <div className="card" style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+            <div className="card" style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
               {searching ? "Searching portals and loading openings..." : "No job openings found. Click 'Search Portals in Real-Time' to refresh."}
             </div>
           ) : (
@@ -352,20 +357,18 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
                   <div style={{ flex: 1, minWidth: "280px" }}>
                     {/* Header line: Title, Portal, Match badge */}
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px", flexWrap: "wrap" }}>
-                      <span style={{ fontSize: "15.5px", fontWeight: "800", color: "#ffffff" }}>
+                      <span style={{ fontSize: "15.5px", fontWeight: "800", color: "var(--text-primary)" }}>
                         {job.title}
                       </span>
 
                       {/* Match Score Badge */}
                       <span
+                        className={score >= 90 ? "badge badge-success" : "badge badge-primary"}
                         style={{
-                          background: score >= 90 ? "#064e3b" : "#1e3a8a",
-                          color: score >= 90 ? "#6ee7b7" : "#bfdbfe",
-                          border: `1px solid ${score >= 90 ? "#059669" : "#3b82f6"}`,
-                          padding: "2px 8px",
-                          borderRadius: "12px",
                           fontSize: "11px",
                           fontWeight: "800",
+                          padding: "2px 8px",
+                          borderRadius: "12px",
                         }}
                       >
                         {score.toFixed(0)}% Match
@@ -374,9 +377,9 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
                       {/* Portal Badge */}
                       <span
                         style={{
-                          background: "#080c16",
-                          color: "#cbd5e1",
-                          border: "1px solid #1e293b",
+                          background: "var(--bg-card-subtle)",
+                          color: "var(--text-secondary)",
+                          border: "1px solid var(--border-subtle)",
                           padding: "2px 8px",
                           borderRadius: "6px",
                           fontSize: "11px",
@@ -389,12 +392,12 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
                     </div>
 
                     {/* Company, Location & Compensation */}
-                    <div style={{ display: "flex", gap: "16px", alignItems: "center", fontSize: "13px", color: "#94a3b8", marginBottom: "10px", flexWrap: "wrap" }}>
-                      <span style={{ fontWeight: "700", color: "#f8fafc" }}>{job.company}</span>
+                    <div style={{ display: "flex", gap: "16px", alignItems: "center", fontSize: "13px", color: "var(--text-secondary)", marginBottom: "10px", flexWrap: "wrap" }}>
+                      <span style={{ fontWeight: "700", color: "var(--text-primary)" }}>{job.company}</span>
                       <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                        <MapPin size={14} color="#64748b" /> {job.location || "Remote"}
+                        <MapPin size={14} color="var(--text-muted)" /> {job.location || "Remote"}
                       </span>
-                      <span style={{ display: "flex", alignItems: "center", gap: "4px", color: "#38bdf8", fontWeight: "700" }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: "4px", color: "var(--accent-cyan-text)", fontWeight: "700" }}>
                         <DollarSign size={14} /> {job.display_salary || job.salary_text || "Competitive"}
                       </span>
                     </div>
@@ -403,8 +406,8 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
                     {job.best_matching_project && job.best_matching_project !== "N/A" && (
                       <div
                         style={{
-                          background: "#080c16",
-                          border: "1px solid #1e293b",
+                          background: "var(--bg-card-subtle)",
+                          border: "1px solid var(--border-subtle)",
                           borderRadius: "8px",
                           padding: "8px 12px",
                           display: "inline-flex",
@@ -413,9 +416,9 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
                           marginBottom: "10px",
                         }}
                       >
-                        <Sparkles size={14} color="#818cf8" />
-                        <span style={{ fontSize: "12px", color: "#cbd5e1" }}>
-                          <b style={{ color: "#818cf8" }}>Top Project Match:</b> {job.best_matching_project}
+                        <Sparkles size={14} color="var(--primary)" />
+                        <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                          <b style={{ color: "var(--primary-text)" }}>Top Project Match:</b> {job.best_matching_project}
                         </span>
                       </div>
                     )}
@@ -427,9 +430,9 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
                           <span
                             key={kwIdx}
                             style={{
-                              background: "#1e1b4b33",
-                              color: "#a5b4fc",
-                              border: "1px solid #3730a3",
+                              background: "var(--primary-subtle)",
+                              color: "var(--primary-text)",
+                              border: "1px solid var(--border-subtle)",
                               padding: "2px 6px",
                               borderRadius: "4px",
                               fontSize: "10.5px",
