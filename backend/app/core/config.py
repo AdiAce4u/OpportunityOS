@@ -1,6 +1,12 @@
 import os
 from functools import lru_cache
 try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
+
+try:
     from pydantic_settings import BaseSettings, SettingsConfigDict
 except ImportError:
     from pydantic import BaseModel as BaseSettings
@@ -12,9 +18,10 @@ class Settings(BaseSettings):
     database_url: str = os.getenv("DATABASE_URL", "sqlite:///./opportunityos.db")
     
     # LLM Abstraction Layer
-    llm_provider: str = os.getenv("LLM_PROVIDER", "mock")
+    llm_provider: str = os.getenv("LLM_PROVIDER", "gemini")
     llm_api_key: str = os.getenv("LLM_API_KEY", "")
-    llm_model: str = os.getenv("LLM_MODEL", "gemini-1.5-flash")
+    gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
+    llm_model: str = os.getenv("LLM_MODEL", "gemini-flash-latest")
     
     # Autonomous Agent Settings
     target_jobs_count: int = 15

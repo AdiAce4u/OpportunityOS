@@ -121,7 +121,10 @@ def tailor_for_job(
     }
 
     # 1. Generate tailored 1-page ATS CV text
-    tailored_text = ResumeTailorEngine.tailor_cv(job_dict, profile_dict)
+    try:
+        tailored_text = ResumeTailorEngine.tailor_cv(job_dict, profile_dict)
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
 
     # 2. Render ATS-compliant 1-page PDF
     os.makedirs("uploads", exist_ok=True)
