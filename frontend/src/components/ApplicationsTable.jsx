@@ -23,14 +23,14 @@ export function ApplicationsTable({ applications = [], onOpenApplication }) {
     <div className="card" style={{ padding: "24px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <div>
-          <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#f8fafc" }}>
+          <h3 style={{ fontSize: "16px", fontWeight: "700", color: "var(--text-primary)" }}>
             Application Pipeline & Tracker
           </h3>
-          <p style={{ fontSize: "13px", color: "#94a3b8", marginTop: "2px" }}>
+          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>
             Tracked across full lifecycle: Discovered → Eligible → Shortlisted → Preparing → Awaiting Approval → Submitted → Interview
           </p>
         </div>
-        <span style={{ fontSize: "12px", color: "#64748b", fontWeight: "600" }}>
+        <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: "600" }}>
           {applications.length} Total Tracked
         </span>
       </div>
@@ -38,7 +38,7 @@ export function ApplicationsTable({ applications = [], onOpenApplication }) {
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13.5px" }}>
           <thead>
-            <tr style={{ borderBottom: "1px solid #1e293b", color: "#64748b", fontSize: "12px", textTransform: "uppercase" }}>
+            <tr style={{ borderBottom: "1px solid var(--border-subtle)", color: "var(--text-muted)", fontSize: "12px", textTransform: "uppercase" }}>
               <th style={{ padding: "12px 16px" }}>Position & Company</th>
               <th style={{ padding: "12px 16px" }}>Match</th>
               <th style={{ padding: "12px 16px" }}>Status</th>
@@ -50,7 +50,7 @@ export function ApplicationsTable({ applications = [], onOpenApplication }) {
           <tbody>
             {applications.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ padding: "32px", textAlign: "center", color: "#64748b" }}>
+                <td colSpan={6} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)" }}>
                   No applications prepared yet. Start the agent to discover matches.
                 </td>
               </tr>
@@ -59,26 +59,26 @@ export function ApplicationsTable({ applications = [], onOpenApplication }) {
                 <tr
                   key={app.id}
                   style={{
-                    borderBottom: "1px solid #111a2e",
+                    borderBottom: "1px solid var(--border-subtle)",
                     transition: "background 0.15s ease",
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "#0c1324")}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-card-hover)")}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
                   <td style={{ padding: "14px 16px" }}>
-                    <div style={{ fontWeight: "700", color: "#ffffff" }}>{app.title}</div>
-                    <div style={{ fontSize: "12px", color: "#94a3b8" }}>{app.company} · {app.location}</div>
+                    <div style={{ fontWeight: "700", color: "var(--text-primary)" }}>{app.title}</div>
+                    <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{app.company} · {app.location}</div>
                   </td>
                   <td style={{ padding: "14px 16px" }}>
-                    <span style={{ fontWeight: "800", color: app.match_score >= 85 ? "#10b981" : "#38bdf8" }}>
+                    <span style={{ fontWeight: "800", color: app.match_score >= 85 ? "var(--accent-emerald)" : "var(--primary)" }}>
                       {app.match_score || "—"}%
                     </span>
                   </td>
                   <td style={{ padding: "14px 16px" }}>{getStatusBadge(app.status)}</td>
-                  <td style={{ padding: "14px 16px", fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", color: "#cbd5e1" }}>
+                  <td style={{ padding: "14px 16px", fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", color: "var(--text-secondary)" }}>
                     {app.external_application_id || "—"}
                   </td>
-                  <td style={{ padding: "14px 16px", fontSize: "12px", color: "#64748b" }}>
+                  <td style={{ padding: "14px 16px", fontSize: "12px", color: "var(--text-muted)" }}>
                     {app.updated_at || app.applied_date || "Just now"}
                   </td>
                   <td style={{ padding: "14px 16px", textAlign: "right" }}>

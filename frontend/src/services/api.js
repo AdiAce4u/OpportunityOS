@@ -65,10 +65,10 @@ export const api = {
     }),
 
   // Autonomous Agent
-  runAgent: (profileId, goal) =>
+  runAgent: (profileId, goal, freeFormGoal = null) =>
     fetchJson("/agent/run", {
       method: "POST",
-      body: JSON.stringify({ profile_id: profileId, goal }),
+      body: JSON.stringify({ profile_id: profileId, goal, free_form_goal: freeFormGoal }),
     }),
   stopAgent: () => fetchJson("/agent/stop", { method: "POST" }),
 

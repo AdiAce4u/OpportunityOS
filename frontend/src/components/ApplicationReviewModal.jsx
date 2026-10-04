@@ -19,6 +19,10 @@ import {
   ExternalLink,
   Layers,
   Sparkles,
+  Eye,
+  RefreshCw,
+  Loader2,
+  Chrome,
 } from "lucide-react";
 import { api } from "../services/api";
 
@@ -26,6 +30,7 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
   if (!application) return null;
 
   const [activeTab, setActiveTab] = useState("resume"); // "resume" | "evidence" | "prefill" | "cover_letter" | "answers" | "research"
+  const [resumeViewMode, setResumeViewMode] = useState("preview"); // "preview" | "text"
   const [isEditing, setIsEditing] = useState(false);
   const [editedResume, setEditedResume] = useState(application.tailored_resume || "");
   const [editedCoverLetter, setEditedCoverLetter] = useState(application.cover_letter || "");
@@ -52,6 +57,7 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
   const research = application.company_research || {};
   const missingInfo = application.missing_information || [];
   const evidenceTable = application.evidence_table || why.evidence_table || [];
+  const resumePdfUrl = `http://localhost:8000/api/applications/${application.id}/resume-pdf`;
 
   const handleApproveSubmit = async () => {
     setSubmitting(true);
@@ -76,18 +82,19 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
   };
 
   const handlePreparePortal = async () => {
+    setActiveTab("prefill");
     setPrefilling(true);
+    setPrefillStatus("Launching Playwright Chromium & populating portal form fields...");
     try {
       const res = await api.preparePortalPrefill(application.id);
       if (res.snapshot_url) {
         setPrefillSnapshotUrl(`http://localhost:8000${res.snapshot_url}?t=${Date.now()}`);
         setPrefillStatus("Form fields pre-filled and visual screenshot captured.");
-        setActiveTab("prefill");
       } else {
         setPrefillStatus(res.details || "Portal pre-filled successfully.");
       }
     } catch (err) {
-      alert(`Portal pre-fill preview error: ${err.message}`);
+      setPrefillStatus(`Portal pre-fill preview error: ${err.message}`);
     } finally {
       setPrefilling(false);
     }
@@ -107,7 +114,7 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
       style={{
         position: "fixed",
         inset: 0,
-        backgroundColor: "rgba(3, 7, 18, 0.8)",
+        backgroundColor: "var(--modal-overlay)",
         backdropFilter: "blur(8px)",
         display: "grid",
         placeItems: "center",
@@ -118,14 +125,14 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
       <div
         className="glass-panel"
         style={{
-          width: "min(960px, 100%)",
-          maxHeight: "92vh",
+          width: "min(1040px, 96%)",
+          maxHeight: "94vh",
           display: "flex",
           flexDirection: "column",
           borderRadius: "16px",
-          background: "#0c1324",
-          border: "1px solid #1e293b",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.7)",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-subtle)",
+          boxShadow: "var(--card-shadow-hover)",
           overflow: "hidden",
         }}
       >
@@ -133,11 +140,11 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
         <div
           style={{
             padding: "20px 28px",
-            borderBottom: "1px solid #1e293b",
+            borderBottom: "1px solid var(--border-subtle)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-start",
-            background: "#090f1d",
+            background: "var(--bg-card)",
           }}
         >
           <div>
@@ -147,23 +154,23 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
                 <Check size={12} /> Eligibility: Verified
               </span>
               {prefillSnapshotUrl && (
-                <span className="badge badge-primary" style={{ background: "#1e1b4b", color: "#a5b4fc", border: "1px solid #4338ca" }}>
+                <span className="badge badge-primary">
                   <Camera size={12} /> Pre-Fill Inspected
                 </span>
               )}
             </div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#ffffff" }}>{role}</h2>
-            <div style={{ fontSize: "14px", color: "#94a3b8", marginTop: "2px" }}>
+            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-primary)" }}>{role}</h2>
+            <div style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "2px" }}>
               {company} · {job.location || "Bangalore, India"} · {job.salary_text || "Competitive"}
             </div>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: "26px", fontWeight: "900", color: "#10b981", lineHeight: "1" }}>
+              <div style={{ fontSize: "26px", fontWeight: "900", color: "var(--accent-emerald)", lineHeight: "1" }}>
                 {matchScore}%
               </div>
-              <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "600", textTransform: "uppercase" }}>
+              <div style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: "600", textTransform: "uppercase" }}>
                 Overall Fit
               </div>
             </div>
@@ -172,7 +179,7 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
               style={{
                 background: "transparent",
                 border: "none",
-                color: "#64748b",
+                color: "var(--text-muted)",
                 cursor: "pointer",
                 padding: "6px",
               }}
@@ -186,8 +193,8 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
         {missingInfo.length > 0 && (
           <div
             style={{
-              background: "#451a03",
-              borderBottom: "1px solid #78350f",
+              background: "var(--accent-amber-subtle)",
+              borderBottom: "1px solid var(--accent-amber-border)",
               padding: "12px 28px",
               display: "flex",
               alignItems: "center",
@@ -196,8 +203,8 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <AlertTriangle size={18} color="#f59e0b" />
-              <div style={{ fontSize: "13px", color: "#fef3c7" }}>
+              <AlertTriangle size={18} color="var(--accent-amber)" />
+              <div style={{ fontSize: "13px", color: "var(--accent-amber-text)" }}>
                 <strong>Missing Information Required:</strong> The agent needs your{" "}
                 <strong>{missingInfo.join(", ")}</strong> before submission.
               </div>
@@ -209,10 +216,10 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
                 value={missingInput}
                 onChange={(e) => setMissingInput(e.target.value)}
                 style={{
-                  background: "#1c1917",
-                  border: "1px solid #78350f",
+                  background: "var(--bg-input)",
+                  border: "1px solid var(--accent-amber-border)",
                   borderRadius: "6px",
-                  color: "#ffffff",
+                  color: "var(--text-primary)",
                   padding: "6px 12px",
                   fontSize: "13px",
                 }}
@@ -231,14 +238,14 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
             flexWrap: "wrap",
             gap: "4px",
             padding: "8px 28px",
-            background: "#080c16",
-            borderBottom: "1px solid #1a233a",
+            background: "var(--bg-well)",
+            borderBottom: "1px solid var(--border-subtle)",
           }}
         >
           {[
             { id: "resume", label: "Tailored Resume", icon: <FileText size={15} /> },
             { id: "evidence", label: "Evidence Citation Table", icon: <Layers size={15} />, badge: evidenceTable.length > 0 ? evidenceTable.length : null },
-            { id: "prefill", label: "Portal Visual Pre-Check", icon: <Camera size={15} /> },
+            { id: "prefill", label: "Live Chromium Tab", icon: <Chrome size={15} /> },
             { id: "cover_letter", label: "Cover Letter", icon: <Mail size={15} /> },
             { id: "answers", label: "Application Answers", icon: <HelpCircle size={15} /> },
             { id: "research", label: "Company Intelligence", icon: <Building2 size={15} /> },
@@ -253,9 +260,10 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
                 padding: "8px 14px",
                 borderRadius: "8px",
                 border: "none",
-                background: activeTab === tab.id ? "#17233e" : "transparent",
-                color: activeTab === tab.id ? "#ffffff" : "#94a3b8",
+                background: activeTab === tab.id ? "var(--bg-card)" : "transparent",
+                color: activeTab === tab.id ? "var(--primary)" : "var(--text-secondary)",
                 fontWeight: activeTab === tab.id ? "700" : "500",
+                boxShadow: activeTab === tab.id ? "var(--card-shadow)" : "none",
                 fontSize: "13px",
                 cursor: "pointer",
               }}
@@ -265,7 +273,7 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
               {tab.badge && (
                 <span
                   style={{
-                    background: "#0284c7",
+                    background: "var(--primary)",
                     color: "white",
                     borderRadius: "10px",
                     padding: "1px 6px",
@@ -289,67 +297,166 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
               <span>{isEditing ? "Done Editing" : "Edit Materials"}</span>
             </button>
 
-            {application.tailored_resume_pdf_path && (
-              <a
-                href={`http://localhost:8000/api/applications/${application.id}/resume-pdf`}
-                download
-                className="btn btn-secondary"
-                style={{ padding: "6px 12px", fontSize: "12px", textDecoration: "none" }}
-              >
-                <Download size={13} />
-                <span>PDF</span>
-              </a>
-            )}
+            <a
+              href={resumePdfUrl}
+              download={`Tailored_Resume_${company.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`}
+              className="btn btn-secondary"
+              style={{ padding: "6px 12px", fontSize: "12px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
+              title="Download ATS single-page tailored PDF"
+            >
+              <Download size={13} />
+              <span>PDF</span>
+            </a>
           </div>
         </div>
 
         {/* Tab Content Body */}
-        <div style={{ padding: "20px 28px", overflowY: "auto", flex: 1, minHeight: "360px", maxHeight: "460px" }}>
+        <div style={{ padding: "20px 28px", overflowY: "auto", flex: 1, minHeight: "400px", maxHeight: "60vh" }}>
           {/* TAB 1: RESUME */}
           {activeTab === "resume" && (
             <div>
+              {/* Resume Controls Bar */}
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  marginBottom: "12px",
-                  fontSize: "12px",
-                  color: "#10b981",
+                  marginBottom: "14px",
+                  background: "var(--bg-card-subtle)",
+                  padding: "10px 14px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-subtle)",
+                  flexWrap: "wrap",
+                  gap: "10px",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <ShieldCheck size={16} />
-                  <span>Single-Page ATS Spec (0.4-inch margins, Action-Result bullets, top 2 domain projects).</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <button
+                    onClick={() => setResumeViewMode("preview")}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      border: "none",
+                      background: resumeViewMode === "preview" ? "var(--primary-subtle)" : "transparent",
+                      color: resumeViewMode === "preview" ? "var(--primary-text)" : "var(--text-secondary)",
+                      fontWeight: "600",
+                      fontSize: "12.5px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Eye size={14} />
+                    <span>Live ATS PDF Preview</span>
+                  </button>
+
+                  <button
+                    onClick={() => setResumeViewMode("text")}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      border: "none",
+                      background: resumeViewMode === "text" ? "var(--primary-subtle)" : "transparent",
+                      color: resumeViewMode === "text" ? "var(--primary-text)" : "var(--text-secondary)",
+                      fontWeight: "600",
+                      fontSize: "12.5px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <FileText size={14} />
+                    <span>Text & Markup</span>
+                  </button>
                 </div>
-                {application.tailored_resume_pdf_path && (
-                  <span style={{ color: "#64748b", fontSize: "11px" }}>
-                    PDF Layout: Single-Page Strict Budget
-                  </span>
-                )}
+
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <a
+                    href={resumePdfUrl}
+                    download={`Tailored_Resume_${company.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`}
+                    className="btn btn-primary"
+                    style={{ padding: "6px 14px", fontSize: "12px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <Download size={13} />
+                    <span>Download Tailored PDF</span>
+                  </a>
+
+                  <a
+                    href={resumePdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-secondary"
+                    style={{ padding: "6px 12px", fontSize: "12px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                    title="Open PDF in a new browser tab"
+                  >
+                    <ExternalLink size={13} />
+                    <span>Fullscreen</span>
+                  </a>
+                </div>
               </div>
+
               {isEditing ? (
-                <textarea
-                  className="textarea"
-                  style={{ minHeight: "280px", fontFamily: "'JetBrains Mono', monospace", fontSize: "12.5px" }}
-                  value={editedResume}
-                  onChange={(e) => setEditedResume(e.target.value)}
-                />
+                <div>
+                  <div style={{ fontSize: "12px", color: "var(--accent-amber-text)", marginBottom: "8px" }}>
+                    Editing raw tailored resume text. Changes will be saved to your application draft upon approval.
+                  </div>
+                  <textarea
+                    className="textarea"
+                    style={{ minHeight: "360px", fontFamily: "'JetBrains Mono', monospace", fontSize: "12.5px" }}
+                    value={editedResume}
+                    onChange={(e) => setEditedResume(e.target.value)}
+                  />
+                </div>
+              ) : resumeViewMode === "preview" ? (
+                <div>
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "460px",
+                      borderRadius: "8px",
+                      overflow: "hidden",
+                      border: "1px solid var(--border-subtle)",
+                      background: "var(--bg-well)",
+                      boxShadow: "var(--card-shadow)",
+                    }}
+                  >
+                    <iframe
+                      src={resumePdfUrl}
+                      title="Tailored ATS PDF"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        border: "none",
+                        background: "#ffffff",
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px", fontSize: "11.5px", color: "var(--text-muted)" }}>
+                    <span>ATS Strict Budget: 0.4-inch margins · Action-Result metric bullets · Verified skills</span>
+                    <span>Direct API: /api/applications/{application.id}/resume-pdf</span>
+                  </div>
+                </div>
               ) : (
-                <pre
-                  style={{
-                    background: "#080c16",
-                    border: "1px solid #1a233a",
-                    padding: "16px",
-                    borderRadius: "8px",
-                    fontSize: "12.5px",
-                    color: "#e2e8f0",
-                    whiteSpace: "pre-wrap",
-                    lineHeight: "1.6",
-                  }}
-                >
-                  {editedResume}
-                </pre>
+                <div>
+                  <pre
+                    style={{
+                      background: "var(--bg-well)",
+                      border: "1px solid var(--border-subtle)",
+                      padding: "16px",
+                      borderRadius: "8px",
+                      fontSize: "12.5px",
+                      color: "var(--text-primary)",
+                      whiteSpace: "pre-wrap",
+                      lineHeight: "1.6",
+                      maxHeight: "460px",
+                      overflowY: "auto",
+                    }}
+                  >
+                    {editedResume}
+                  </pre>
+                </div>
               )}
             </div>
           )}
@@ -364,14 +471,14 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
                   gap: "8px",
                   marginBottom: "14px",
                   fontSize: "12.5px",
-                  color: "#94a3b8",
-                  background: "#080c16",
+                  color: "var(--text-secondary)",
+                  background: "var(--bg-card-subtle)",
                   padding: "10px 14px",
                   borderRadius: "8px",
-                  border: "1px solid #1a233a",
+                  border: "1px solid var(--border-subtle)",
                 }}
               >
-                <ShieldCheck size={16} color="#10b981" />
+                <ShieldCheck size={16} color="var(--accent-emerald)" />
                 <span>
                   <strong>1-to-1 Evidence Citations:</strong> Transparent mapping of job requirements to verified projects, roles, and candidate credentials. Zero fabricated experience.
                 </span>
@@ -381,10 +488,10 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                     <thead>
-                      <tr style={{ background: "#090f1d", borderBottom: "1px solid #1e293b", textAlign: "left" }}>
-                        <th style={{ padding: "12px 14px", color: "#94a3b8", fontWeight: "600" }}>Job Requirement</th>
-                        <th style={{ padding: "12px 14px", color: "#94a3b8", fontWeight: "600" }}>Candidate Evidence (Profile / CV)</th>
-                        <th style={{ padding: "12px 14px", color: "#94a3b8", fontWeight: "600", width: "120px" }}>Match Rating</th>
+                      <tr style={{ background: "var(--bg-well)", borderBottom: "1px solid var(--border-subtle)", textAlign: "left" }}>
+                        <th style={{ padding: "12px 14px", color: "var(--text-muted)", fontWeight: "600" }}>Job Requirement</th>
+                        <th style={{ padding: "12px 14px", color: "var(--text-muted)", fontWeight: "600" }}>Candidate Evidence (Profile / CV)</th>
+                        <th style={{ padding: "12px 14px", color: "var(--text-muted)", width: "120px" }}>Match Rating</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -392,14 +499,14 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
                         <tr
                           key={idx}
                           style={{
-                            borderBottom: "1px solid #162032",
-                            background: idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)",
+                            borderBottom: "1px solid var(--border-subtle)",
+                            background: idx % 2 === 0 ? "transparent" : "var(--bg-well)",
                           }}
                         >
-                          <td style={{ padding: "12px 14px", fontWeight: "600", color: "#f1f5f9" }}>
+                          <td style={{ padding: "12px 14px", fontWeight: "600", color: "var(--text-primary)" }}>
                             {item.requirement}
                           </td>
-                          <td style={{ padding: "12px 14px", color: "#cbd5e1" }}>
+                          <td style={{ padding: "12px 14px", color: "var(--text-secondary)" }}>
                             {item.evidence}
                           </td>
                           <td style={{ padding: "12px 14px" }}>
@@ -409,8 +516,9 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
                                   display: "inline-flex",
                                   alignItems: "center",
                                   gap: "4px",
-                                  background: "#064e3b",
-                                  color: "#34d399",
+                                  background: "var(--accent-emerald-subtle)",
+                                  color: "var(--accent-emerald-text)",
+                                  border: "1px solid var(--accent-emerald-border)",
                                   padding: "3px 8px",
                                   borderRadius: "6px",
                                   fontSize: "11px",
@@ -426,8 +534,9 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
                                   display: "inline-flex",
                                   alignItems: "center",
                                   gap: "4px",
-                                  background: "#451a03",
-                                  color: "#fbbf24",
+                                  background: "var(--accent-amber-subtle)",
+                                  color: "var(--accent-amber-text)",
+                                  border: "1px solid var(--accent-amber-border)",
                                   padding: "3px 8px",
                                   borderRadius: "6px",
                                   fontSize: "11px",
@@ -443,8 +552,9 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
                                   display: "inline-flex",
                                   alignItems: "center",
                                   gap: "4px",
-                                  background: "#1e293b",
-                                  color: "#94a3b8",
+                                  background: "var(--bg-well)",
+                                  color: "var(--text-muted)",
+                                  border: "1px solid var(--border-subtle)",
                                   padding: "3px 8px",
                                   borderRadius: "6px",
                                   fontSize: "11px",
@@ -461,37 +571,41 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
                   </table>
                 </div>
               ) : (
-                <div style={{ textAlign: "center", padding: "30px", color: "#64748b", background: "#080c16", borderRadius: "8px" }}>
+                <div style={{ textAlign: "center", padding: "30px", color: "var(--text-muted)", background: "var(--bg-card-subtle)", borderRadius: "8px" }}>
                   All requirements verified. Evidence table will be generated when analyzed against custom or structured JDs.
                 </div>
               )}
             </div>
           )}
 
-          {/* TAB 3: VISUAL PRE-FILL PREVIEW */}
+          {/* TAB 3: LIVE CHROMIUM TAB PREFILL */}
           {activeTab === "prefill" && (
             <div>
+              {/* Architecture & Safety Banner */}
               <div
                 style={{
+                  background: "var(--bg-card-subtle)",
+                  padding: "14px 18px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--border-subtle)",
+                  marginBottom: "16px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  marginBottom: "16px",
-                  background: "#080c16",
-                  padding: "12px 16px",
-                  borderRadius: "8px",
-                  border: "1px solid #1a233a",
+                  gap: "16px",
+                  flexWrap: "wrap",
                 }}
               >
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <Camera size={16} color="#38bdf8" />
-                    <span style={{ fontSize: "13.5px", fontWeight: "700", color: "#ffffff" }}>
-                      Stage 1: Two-Stage Browser Pre-Fill Checkpoint
+                    <Chrome size={16} color="var(--accent-cyan-text)" />
+                    <span style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-primary)" }}>
+                      Live Chromium Tab (Multi-Tab Enabled)
                     </span>
+                    <span className="badge badge-primary" style={{ fontSize: "10.5px" }}>HUMAN APPLICATION GATE</span>
                   </div>
-                  <p style={{ fontSize: "12px", color: "#94a3b8", marginTop: "2px" }}>
-                    Playwright populates portal inputs and uploads your resume, pausing before submission so you can visually audit the form.
+                  <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px", maxWidth: "620px" }}>
+                    Playwright opens a dedicated new tab in your Chromium browser window, auto-fills all your candidate facts, attaches your tailored single-page ATS PDF, and leaves the tab open so you can review and hit the Apply button yourself.
                   </p>
                 </div>
 
@@ -499,18 +613,41 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
                   className="btn btn-primary"
                   onClick={handlePreparePortal}
                   disabled={prefilling}
-                  style={{ whiteSpace: "nowrap", fontSize: "12px", padding: "8px 14px" }}
+                  style={{ whiteSpace: "nowrap", fontSize: "12.5px", padding: "8px 16px", display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
-                  <Camera size={14} />
-                  <span>{prefilling ? "Navigating & Pre-filling..." : "Run Browser Pre-Fill"}</span>
+                  {prefilling ? <Loader2 size={14} className="animate-spin" /> : <Chrome size={14} />}
+                  <span>{prefilling ? "Opening Chromium Tab..." : "Open in Chromium & Pre-Fill"}</span>
                 </button>
               </div>
 
-              {prefillSnapshotUrl ? (
+              {/* In-progress loading state */}
+              {prefilling && (
                 <div
                   style={{
-                    background: "#050811",
-                    border: "1px solid #1e293b",
+                    border: "1px solid var(--border-subtle)",
+                    borderRadius: "10px",
+                    padding: "36px 20px",
+                    textAlign: "center",
+                    background: "var(--bg-card-subtle)",
+                    marginBottom: "16px",
+                  }}
+                >
+                  <Loader2 size={36} className="animate-spin" color="var(--primary)" style={{ margin: "0 auto 12px" }} />
+                  <h4 style={{ fontSize: "15px", fontWeight: "700", color: "var(--text-primary)", marginBottom: "6px" }}>
+                    Opening New Tab in Chromium Browser...
+                  </h4>
+                  <p style={{ fontSize: "12.5px", color: "var(--text-secondary)", maxWidth: "500px", margin: "0 auto" }}>
+                    Launching/connecting to Chromium window, opening a dedicated tab for {company}, populating candidate fields, attaching tailored ATS PDF, and capturing snapshot...
+                  </p>
+                </div>
+              )}
+
+              {/* Screenshot & Active Tab Display */}
+              {!prefilling && prefillSnapshotUrl && (
+                <div
+                  style={{
+                    background: "var(--bg-card-subtle)",
+                    border: "1px solid var(--border-subtle)",
                     borderRadius: "10px",
                     overflow: "hidden",
                     display: "flex",
@@ -519,65 +656,107 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
                 >
                   <div
                     style={{
-                      padding: "8px 16px",
-                      background: "#090f1d",
-                      borderBottom: "1px solid #1e293b",
+                      padding: "10px 16px",
+                      background: "var(--bg-well)",
+                      borderBottom: "1px solid var(--border-subtle)",
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
                       fontSize: "12px",
-                      color: "#94a3b8",
+                      color: "var(--text-secondary)",
+                      flexWrap: "wrap",
+                      gap: "8px",
                     }}
                   >
-                    <span>Playwright Browser Viewport Snapshot</span>
-                    <a
-                      href={prefillSnapshotUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: "#38bdf8", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px" }}
-                    >
-                      <ExternalLink size={12} /> Open Full Screenshot
-                    </a>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span className="badge badge-success" style={{ fontSize: "11px" }}>
+                        <Check size={11} /> Pre-Filled in Chromium Tab
+                      </span>
+                      <span>Playwright Live Viewport Snapshot</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <a
+                        href={job.url || `http://localhost:8000/portal/apply/${job.external_id || "job-001"}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: "var(--primary)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: "600" }}
+                        title="Open portal URL directly"
+                      >
+                        <ExternalLink size={12} /> Portal Webpage
+                      </a>
+                      <a
+                        href={prefillSnapshotUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: "var(--accent-cyan-text)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: "600" }}
+                      >
+                        <ExternalLink size={12} /> Open Snapshot
+                      </a>
+                    </div>
                   </div>
-                  <div style={{ padding: "12px", display: "grid", placeItems: "center", maxHeight: "380px", overflowY: "auto" }}>
+
+                  <div style={{ padding: "16px", display: "grid", placeItems: "center", maxHeight: "420px", overflowY: "auto", background: "var(--bg-well)" }}>
                     <img
                       src={prefillSnapshotUrl}
                       alt="Portal Pre-Fill Snapshot"
                       style={{
                         width: "100%",
-                        maxWidth: "800px",
+                        maxWidth: "850px",
                         borderRadius: "6px",
-                        border: "1px solid #334155",
-                        boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+                        border: "1px solid var(--border-subtle)",
+                        boxShadow: "var(--card-shadow)",
                       }}
                     />
                   </div>
+
+                  <div
+                    style={{
+                      padding: "12px 16px",
+                      background: "var(--bg-well)",
+                      borderTop: "1px solid var(--border-subtle)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      fontSize: "12.5px",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <ShieldCheck size={16} color="var(--accent-emerald)" />
+                      <span>
+                        <strong style={{ color: "var(--text-primary)" }}>Chromium tab is open on your screen:</strong> Switch to your Chromium window to review details, and <strong>hit the Apply button yourself</strong>! Our background listener will automatically record the confirmation receipt.
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              ) : (
+              )}
+
+              {/* No snapshot yet placeholder */}
+              {!prefilling && !prefillSnapshotUrl && (
                 <div
                   style={{
-                    border: "2px dashed #1e293b",
+                    border: "2px dashed var(--border-subtle)",
                     borderRadius: "10px",
-                    padding: "40px 20px",
+                    padding: "44px 20px",
                     textAlign: "center",
-                    background: "#080c16",
+                    background: "var(--bg-card-subtle)",
                   }}
                 >
-                  <Camera size={36} color="#64748b" style={{ margin: "0 auto 12px" }} />
-                  <h4 style={{ fontSize: "14.5px", fontWeight: "700", color: "#f1f5f9", marginBottom: "4px" }}>
-                    No Pre-Fill Snapshot Captured Yet
+                  <Chrome size={42} color="var(--accent-cyan-text)" style={{ margin: "0 auto 12px" }} />
+                  <h4 style={{ fontSize: "15px", fontWeight: "700", color: "var(--text-primary)", marginBottom: "4px" }}>
+                    Ready to Open in Chromium Browser
                   </h4>
-                  <p style={{ fontSize: "12.5px", color: "#94a3b8", maxWidth: "420px", margin: "0 auto 16px" }}>
-                    Click "Run Browser Pre-Fill" to let Playwright open the portal, populate all candidate fields and attach the PDF, and return a visual snapshot for your inspection.
+                  <p style={{ fontSize: "12.5px", color: "var(--text-secondary)", maxWidth: "480px", margin: "0 auto 18px", lineHeight: "1.5" }}>
+                    Click below to open a new tab of this job's application webpage in Chromium. OpportunityOS will auto-populate all candidate inputs, attach your single-page tailored PDF, and leave the tab open so you can hit Apply.
                   </p>
                   <button
                     className="btn btn-primary"
                     onClick={handlePreparePortal}
                     disabled={prefilling}
-                    style={{ fontSize: "13px", padding: "8px 18px" }}
+                    style={{ fontSize: "13px", padding: "9px 20px", display: "inline-flex", alignItems: "center", gap: "7px" }}
                   >
-                    <Camera size={15} />
-                    <span>{prefilling ? "Simulating Browser Pre-Fill..." : "Capture Form Pre-Fill"}</span>
+                    <Chrome size={15} />
+                    <span>Open in Chromium & Pre-Fill Now</span>
                   </button>
                 </div>
               )}
@@ -597,12 +776,12 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
               ) : (
                 <div
                   style={{
-                    background: "#080c16",
-                    border: "1px solid #1a233a",
+                    background: "var(--bg-card-subtle)",
+                    border: "1px solid var(--border-subtle)",
                     padding: "20px",
                     borderRadius: "8px",
                     fontSize: "13.5px",
-                    color: "#e2e8f0",
+                    color: "var(--text-primary)",
                     whiteSpace: "pre-wrap",
                     lineHeight: "1.6",
                   }}
@@ -617,8 +796,8 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
           {activeTab === "answers" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               {Object.entries(editedAnswers).map(([k, v]) => (
-                <div key={k} style={{ background: "#080c16", border: "1px solid #1a233a", padding: "16px", borderRadius: "8px" }}>
-                  <div style={{ fontSize: "12px", fontWeight: "700", color: "#818cf8", textTransform: "uppercase", marginBottom: "6px" }}>
+                <div key={k} style={{ background: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", padding: "16px", borderRadius: "8px" }}>
+                  <div style={{ fontSize: "12px", fontWeight: "700", color: "var(--primary)", textTransform: "uppercase", marginBottom: "6px" }}>
                     {k.replace("_", " ")}
                   </div>
                   {isEditing ? (
@@ -629,7 +808,7 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
                       onChange={(e) => setEditedAnswers({ ...editedAnswers, [k]: e.target.value })}
                     />
                   ) : (
-                    <div style={{ fontSize: "13.5px", color: "#f1f5f9", lineHeight: "1.5" }}>{v}</div>
+                    <div style={{ fontSize: "13.5px", color: "var(--text-primary)", lineHeight: "1.5" }}>{v}</div>
                   )}
                 </div>
               ))}
@@ -639,26 +818,26 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
           {/* TAB 6: RESEARCH */}
           {activeTab === "research" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ background: "#080c16", border: "1px solid #1a233a", padding: "16px", borderRadius: "8px" }}>
-                <h4 style={{ fontSize: "14px", fontWeight: "700", color: "#ffffff", marginBottom: "6px" }}>Company Summary</h4>
-                <p style={{ fontSize: "13px", color: "#cbd5e1", lineHeight: "1.5" }}>
+              <div style={{ background: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", padding: "16px", borderRadius: "8px" }}>
+                <h4 style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-primary)", marginBottom: "6px" }}>Company Summary</h4>
+                <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.5" }}>
                   {research.company_summary || "Leading autonomous engineering group."}
                 </p>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-                <div style={{ background: "#080c16", border: "1px solid #1a233a", padding: "14px", borderRadius: "8px" }}>
-                  <span style={{ fontSize: "12px", fontWeight: "700", color: "#94a3b8" }}>Domain & Scale</span>
-                  <div style={{ fontSize: "13.5px", fontWeight: "600", color: "#38bdf8", marginTop: "4px" }}>
+                <div style={{ background: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", padding: "14px", borderRadius: "8px" }}>
+                  <span style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-muted)" }}>Domain & Scale</span>
+                  <div style={{ fontSize: "13.5px", fontWeight: "600", color: "var(--accent-cyan-text)", marginTop: "4px" }}>
                     {research.domain || "Robotics / AI"} · {research.size || "100+ employees"}
                   </div>
                 </div>
 
-                <div style={{ background: "#080c16", border: "1px solid #1a233a", padding: "14px", borderRadius: "8px" }}>
-                  <span style={{ fontSize: "12px", fontWeight: "700", color: "#94a3b8" }}>Technology Stack</span>
+                <div style={{ background: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", padding: "14px", borderRadius: "8px" }}>
+                  <span style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-muted)" }}>Technology Stack</span>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "6px" }}>
                     {(research.technology || ["ROS2", "Python", "C++"]).map((t, idx) => (
-                      <span key={idx} style={{ background: "#1e293b", color: "#f8fafc", padding: "2px 8px", borderRadius: "4px", fontSize: "11px" }}>
+                      <span key={idx} style={{ background: "var(--bg-card-hover)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", padding: "2px 8px", borderRadius: "4px", fontSize: "11px" }}>
                         {t}
                       </span>
                     ))}
@@ -667,9 +846,9 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
               </div>
 
               {research.recent_news?.length > 0 && (
-                <div style={{ background: "#080c16", border: "1px solid #1a233a", padding: "16px", borderRadius: "8px" }}>
-                  <h4 style={{ fontSize: "13px", fontWeight: "700", color: "#f59e0b", marginBottom: "6px" }}>Recent Milestone News</h4>
-                  <ul style={{ paddingLeft: "18px", fontSize: "12.5px", color: "#cbd5e1" }}>
+                <div style={{ background: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", padding: "16px", borderRadius: "8px" }}>
+                  <h4 style={{ fontSize: "13px", fontWeight: "700", color: "var(--accent-amber-text)", marginBottom: "6px" }}>Recent Milestone News</h4>
+                  <ul style={{ paddingLeft: "18px", fontSize: "12.5px", color: "var(--text-secondary)" }}>
                     {research.recent_news.map((n, idx) => (
                       <li key={idx} style={{ marginBottom: "4px" }}>{n}</li>
                     ))}
@@ -684,14 +863,14 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
         <div
           style={{
             padding: "18px 28px",
-            background: "#090f1d",
-            borderTop: "1px solid #1e293b",
+            background: "var(--bg-card)",
+            borderTop: "1px solid var(--border-subtle)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
           }}
         >
-          <div style={{ fontSize: "12.5px", color: "#64748b" }}>
+          <div style={{ fontSize: "12.5px", color: "var(--text-muted)" }}>
             {prefillStatus || "Browser automation will only execute with your explicit authorization."}
           </div>
 
@@ -700,10 +879,11 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
               className="btn btn-secondary"
               disabled={prefilling || submitting}
               onClick={handlePreparePortal}
-              title="Runs Stage 1: Pre-fills portal and takes a screenshot without submitting"
+              title="Opens a new tab in Chromium, fills all details and attaches CV, leaving it open so you can hit Apply"
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
             >
-              <Camera size={14} />
-              <span>{prefilling ? "Pre-filling..." : "Visual Pre-Check"}</span>
+              {prefilling ? <Loader2 size={14} className="animate-spin" /> : <Chrome size={14} color="var(--accent-cyan-text)" />}
+              <span>{prefilling ? "Opening Tab..." : "Open in Chromium & Pre-Fill"}</span>
             </button>
 
             <button

@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     
     # Browser Automation Settings
     allow_browser_submit: bool = True
-    browser_headless: bool = True
+    browser_headless: bool = False
     browser_slow_mo_ms: int = 100
     
     # App URLs

@@ -93,10 +93,10 @@ export function ProfileEditor({ profile, onSaveProfile }) {
     <div className="card" style={{ padding: "28px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" }}>
         <div>
-          <h3 style={{ fontSize: "18px", fontWeight: "800", color: "#f8fafc" }}>
+          <h3 style={{ fontSize: "18px", fontWeight: "800", color: "var(--text-primary)" }}>
             Candidate Profile & Ground Truth
           </h3>
-          <p style={{ fontSize: "13px", color: "#94a3b8", marginTop: "4px" }}>
+          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
             The autonomous agent only relies on verified facts entered here. Zero synthetic claims will be generated.
           </p>
         </div>
@@ -105,17 +105,17 @@ export function ProfileEditor({ profile, onSaveProfile }) {
       {/* PDF Upload Box */}
       <div
         style={{
-          border: "2px dashed #243452",
-          background: "#080c16",
+          border: "2px dashed var(--border-hover)",
+          background: "var(--bg-card-subtle)",
           borderRadius: "12px",
           padding: "24px",
           textAlign: "center",
           marginBottom: "28px",
         }}
       >
-        <Upload size={32} color="#818cf8" style={{ margin: "0 auto 10px" }} />
-        <h4 style={{ fontSize: "15px", fontWeight: "700", color: "#ffffff" }}>Upload Resume PDF</h4>
-        <p style={{ fontSize: "12.5px", color: "#64748b", margin: "4px 0 14px" }}>
+        <Upload size={32} color="var(--primary)" style={{ margin: "0 auto 10px" }} />
+        <h4 style={{ fontSize: "15px", fontWeight: "700", color: "var(--text-primary)" }}>Upload Resume PDF</h4>
+        <p style={{ fontSize: "12.5px", color: "var(--text-muted)", margin: "4px 0 14px" }}>
           PDF will be parsed into structured skills, coursework, and verified dates.
         </p>
         <label className="btn btn-secondary" style={{ cursor: "pointer", display: "inline-flex" }}>
@@ -123,7 +123,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
           <input type="file" accept=".pdf" onChange={handleFileUpload} style={{ display: "none" }} />
         </label>
         {uploadMsg && (
-          <div style={{ fontSize: "12px", color: uploadMsg.includes("✓") ? "#10b981" : "#f59e0b", marginTop: "10px" }}>
+          <div style={{ fontSize: "12px", color: uploadMsg.includes("✓") ? "var(--accent-emerald-text)" : "var(--accent-amber-text)", marginTop: "10px" }}>
             {uploadMsg}
           </div>
         )}
@@ -133,7 +133,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
         {/* Personal Details */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
           <div>
-            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#94a3b8", marginBottom: "6px" }}>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "var(--text-secondary)", marginBottom: "6px" }}>
               Full Name
             </label>
             <input
@@ -145,7 +145,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#94a3b8", marginBottom: "6px" }}>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "var(--text-secondary)", marginBottom: "6px" }}>
               Email Address
             </label>
             <input
@@ -157,7 +157,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#94a3b8", marginBottom: "6px" }}>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "var(--text-secondary)", marginBottom: "6px" }}>
               Contact Phone
             </label>
             <input
@@ -169,7 +169,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#94a3b8", marginBottom: "6px" }}>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "var(--text-secondary)", marginBottom: "6px" }}>
               Graduation Year
             </label>
             <input
@@ -181,7 +181,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#94a3b8", marginBottom: "6px" }}>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "var(--text-secondary)", marginBottom: "6px" }}>
               Degree & Major
             </label>
             <input
@@ -193,7 +193,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#94a3b8", marginBottom: "6px" }}>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "var(--text-secondary)", marginBottom: "6px" }}>
               College / University
             </label>
             <input
@@ -205,7 +205,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#94a3b8", marginBottom: "6px" }}>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "var(--text-secondary)", marginBottom: "6px" }}>
               CGPA / Score
             </label>
             <input
@@ -218,7 +218,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#94a3b8", marginBottom: "6px" }}>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "var(--text-secondary)", marginBottom: "6px" }}>
               Minimum Stipend / Salary (₹/month)
             </label>
             <input
@@ -232,7 +232,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
 
         {/* Work Authorization */}
         <div>
-          <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#94a3b8", marginBottom: "6px" }}>
+          <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "var(--text-secondary)", marginBottom: "6px" }}>
             Work Authorization Status
           </label>
           <input
@@ -245,7 +245,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
 
         {/* Skills Tag Management */}
         <div>
-          <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#94a3b8", marginBottom: "6px" }}>
+          <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "var(--text-secondary)", marginBottom: "6px" }}>
             Verified Technical Skills ({formData.skills?.length || 0})
           </label>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
@@ -253,9 +253,9 @@ export function ProfileEditor({ profile, onSaveProfile }) {
               <span
                 key={idx}
                 style={{
-                  background: "#16233d",
-                  color: "#cbd5e1",
-                  border: "1px solid #27385a",
+                  background: "var(--bg-card-hover)",
+                  color: "var(--text-primary)",
+                  border: "1px solid var(--border-subtle)",
                   padding: "4px 10px",
                   borderRadius: "6px",
                   fontSize: "12.5px",
@@ -265,7 +265,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
                 }}
               >
                 <span>{skill}</span>
-                <X size={12} style={{ cursor: "pointer" }} onClick={() => removeSkill(skill)} />
+                <X size={12} style={{ cursor: "pointer", color: "var(--text-muted)" }} onClick={() => removeSkill(skill)} />
               </span>
             ))}
           </div>

@@ -41,20 +41,20 @@ export function Sidebar({ currentTab, setTab, awaitingCount, interviewCount }) {
             width: "36px",
             height: "36px",
             borderRadius: "10px",
-            background: "linear-gradient(135deg, #6366f1 0%, #3b82f6 100%)",
+            background: "var(--primary)",
             display: "grid",
             placeItems: "center",
             color: "white",
-            boxShadow: "0 4px 15px rgba(99, 102, 241, 0.4)",
+            boxShadow: "0 4px 14px var(--primary-glow)",
           }}
         >
           <Zap size={20} />
         </div>
         <div>
-          <h2 style={{ fontSize: "18px", fontWeight: "800", letterSpacing: "-0.02em", color: "#f8fafc" }} className="brand-text">
-            Opportunity<span style={{ color: "#818cf8" }}>OS</span>
+          <h2 style={{ fontSize: "18px", fontWeight: "800", letterSpacing: "-0.02em", color: "var(--text-primary)" }} className="brand-text">
+            Opportunity<span style={{ color: "var(--primary)" }}>OS</span>
           </h2>
-          <p style={{ fontSize: "11px", color: "#64748b", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.08em" }} className="brand-text">
+          <p style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.08em" }} className="brand-text">
             Agentic Job Engine
           </p>
         </div>
@@ -72,27 +72,27 @@ export function Sidebar({ currentTab, setTab, awaitingCount, interviewCount }) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "12px 14px",
+                padding: "11px 14px",
                 borderRadius: "10px",
                 border: "none",
-                background: isActive ? "#18223a" : "transparent",
-                color: isActive ? "#ffffff" : "#94a3b8",
-                fontWeight: isActive ? "600" : "500",
-                fontSize: "14px",
+                background: isActive ? "var(--primary-subtle)" : "transparent",
+                color: isActive ? "var(--primary-text)" : "var(--text-secondary)",
+                fontWeight: isActive ? "700" : "500",
+                fontSize: "13.5px",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
                 textAlign: "left",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <span style={{ color: isActive ? "#818cf8" : "#64748b" }}>{item.icon}</span>
+                <span style={{ color: isActive ? "var(--primary)" : "var(--text-muted)" }}>{item.icon}</span>
                 <span className="nav-text">{item.label}</span>
               </div>
               {item.badge && (
                 <span
                   style={{
                     background: item.badgeColor,
-                    color: "#000",
+                    color: "#ffffff",
                     fontWeight: "800",
                     fontSize: "11px",
                     padding: "2px 7px",
@@ -111,8 +111,8 @@ export function Sidebar({ currentTab, setTab, awaitingCount, interviewCount }) {
       {/* Safety Notice Footer */}
       <div
         style={{
-          background: "#0d1322",
-          border: "1px solid #1c2742",
+          background: "var(--bg-card-subtle)",
+          border: "1px solid var(--border-subtle)",
           borderRadius: "10px",
           padding: "14px",
           display: "flex",
@@ -121,10 +121,10 @@ export function Sidebar({ currentTab, setTab, awaitingCount, interviewCount }) {
         }}
         className="nav-text"
       >
-        <ShieldCheck size={18} color="#10b981" style={{ flexShrink: 0, marginTop: "2px" }} />
+        <ShieldCheck size={18} color="var(--accent-emerald)" style={{ flexShrink: 0, marginTop: "2px" }} />
         <div>
-          <div style={{ fontSize: "11px", fontWeight: "700", color: "#e2e8f0" }}>Safety Guaranteed</div>
-          <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px", lineHeight: "1.4" }}>
+          <div style={{ fontSize: "12px", fontWeight: "700", color: "var(--text-primary)" }}>Safety Guaranteed</div>
+          <div style={{ fontSize: "11.5px", color: "var(--text-muted)", marginTop: "2px", lineHeight: "1.4" }}>
             Strictly zero qualification fabrication. Human approval enforced.
           </div>
         </div>

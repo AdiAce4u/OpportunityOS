@@ -6,26 +6,26 @@ export function TopOpportunities({ jobs = [], onSelectJob, onOpenReview, onOpenC
     <div className="card" style={{ padding: "20px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <Award size={18} color="#818cf8" />
-          <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#f8fafc" }}>Top Opportunities</h3>
+          <Award size={18} color="var(--primary)" />
+          <h3 style={{ fontSize: "15px", fontWeight: "700", color: "var(--text-primary)" }}>Top Opportunities</h3>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           {onOpenCustomJD && (
             <button
               className="btn btn-secondary"
-              style={{ fontSize: "11px", padding: "4px 10px", height: "auto" }}
+              style={{ fontSize: "11.5px", padding: "4px 10px", height: "auto" }}
               onClick={onOpenCustomJD}
             >
               + Paste Custom JD
             </button>
           )}
-          <span style={{ fontSize: "12px", color: "#64748b" }}>Ranked by Multi-Factor Fit</span>
+          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Ranked by Multi-Factor Fit</span>
         </div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {jobs.length === 0 ? (
-          <div style={{ color: "#64748b", padding: "20px", textAlign: "center" }}>
+          <div style={{ color: "var(--text-muted)", padding: "20px", textAlign: "center" }}>
             No opportunities shortlisted yet. Run the agent to discover and match roles.
           </div>
         ) : (
@@ -40,8 +40,8 @@ export function TopOpportunities({ jobs = [], onSelectJob, onOpenReview, onOpenC
               <div
                 key={idx}
                 style={{
-                  background: "#080c16",
-                  border: "1px solid #1a233a",
+                  background: "var(--bg-card-subtle)",
+                  border: "1px solid var(--border-subtle)",
                   borderRadius: "10px",
                   padding: "16px",
                   display: "flex",
@@ -52,30 +52,20 @@ export function TopOpportunities({ jobs = [], onSelectJob, onOpenReview, onOpenC
               >
                 <div style={{ flex: 1, minWidth: 0, paddingRight: "16px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "14px", fontWeight: "700", color: "#ffffff" }}>
+                    <span style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-primary)" }}>
                       {job.title}
                     </span>
-                    <span
-                      style={{
-                        background: "rgba(16, 185, 129, 0.15)",
-                        color: "#34d399",
-                        border: "1px solid rgba(16, 185, 129, 0.3)",
-                        padding: "2px 8px",
-                        borderRadius: "12px",
-                        fontSize: "11px",
-                        fontWeight: "800",
-                      }}
-                    >
+                    <span className="badge badge-success" style={{ fontSize: "11px", fontWeight: "800", padding: "2px 8px" }}>
                       {score}% Match
                     </span>
                   </div>
 
-                  <div style={{ fontSize: "12.5px", color: "#94a3b8", display: "flex", gap: "14px", alignItems: "center", marginBottom: "8px" }}>
-                    <span style={{ fontWeight: "600", color: "#cbd5e1" }}>{job.company}</span>
+                  <div style={{ fontSize: "12.5px", color: "var(--text-secondary)", display: "flex", gap: "14px", alignItems: "center", marginBottom: "8px" }}>
+                    <span style={{ fontWeight: "600", color: "var(--text-primary)" }}>{job.company}</span>
                     <span style={{ display: "flex", alignItems: "center", gap: "3px" }}>
-                      <MapPin size={13} color="#64748b" /> {job.location || "Remote"}
+                      <MapPin size={13} color="var(--text-muted)" /> {job.location || "Remote"}
                     </span>
-                    <span style={{ display: "flex", alignItems: "center", gap: "3px", color: "#38bdf8" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: "3px", color: "var(--accent-cyan-text)", fontWeight: "600" }}>
                       <DollarSign size={13} /> {job.salary_text || "Competitive"}
                     </span>
                   </div>
@@ -86,11 +76,12 @@ export function TopOpportunities({ jobs = [], onSelectJob, onOpenReview, onOpenC
                       <span
                         key={sIdx}
                         style={{
-                          background: "#064e3b33",
-                          color: "#34d399",
-                          fontSize: "10.5px",
+                          background: "var(--accent-emerald-subtle)",
+                          color: "var(--accent-emerald-text)",
+                          border: "1px solid var(--accent-emerald-border)",
+                          fontSize: "11px",
                           fontWeight: "600",
-                          padding: "2px 6px",
+                          padding: "2px 8px",
                           borderRadius: "4px",
                           display: "inline-flex",
                           alignItems: "center",
@@ -104,11 +95,12 @@ export function TopOpportunities({ jobs = [], onSelectJob, onOpenReview, onOpenC
                       <span
                         key={mIdx}
                         style={{
-                          background: "#7f1d1d33",
-                          color: "#fca5a5",
-                          fontSize: "10.5px",
+                          background: "var(--accent-rose-subtle)",
+                          color: "var(--accent-rose-text)",
+                          border: "1px solid var(--accent-rose-border)",
+                          fontSize: "11px",
                           fontWeight: "600",
-                          padding: "2px 6px",
+                          padding: "2px 8px",
                           borderRadius: "4px",
                           display: "inline-flex",
                           alignItems: "center",

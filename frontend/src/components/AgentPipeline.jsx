@@ -171,10 +171,10 @@ export function AgentPipeline({ currentStage = "idle" }) {
           <span className="badge badge-primary" style={{ marginBottom: "8px" }}>
             14-Stage Multi-Agent Architecture
           </span>
-          <h3 style={{ fontSize: "18px", fontWeight: "700", color: "#f8fafc" }}>
+          <h3 style={{ fontSize: "18px", fontWeight: "700", color: "var(--text-primary)" }}>
             Autonomous End-to-End Agent Workflow
           </h3>
-          <p style={{ fontSize: "13px", color: "#94a3b8", marginTop: "4px" }}>
+          <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
             User Goal → Autonomous Multi-Query Search → Hard Eligibility Filtering → Fit Ranking → Truthful Resume Tailoring → Human Approval Gate → Playwright Automation → Tracking
           </p>
         </div>
@@ -195,8 +195,8 @@ export function AgentPipeline({ currentStage = "idle" }) {
               key={stage.id}
               onClick={() => setSelectedStage(stage)}
               style={{
-                background: isSelected ? "#18233c" : "#0a0f1d",
-                border: isSelected ? `1.5px solid ${stage.color}` : "1px solid #1a243b",
+                background: isSelected ? "var(--bg-card-hover)" : "var(--bg-card-subtle)",
+                border: isSelected ? `1.5px solid ${stage.color}` : "1px solid var(--border-subtle)",
                 borderRadius: "10px",
                 padding: "14px",
                 cursor: "pointer",
@@ -210,7 +210,7 @@ export function AgentPipeline({ currentStage = "idle" }) {
                     width: "32px",
                     height: "32px",
                     borderRadius: "8px",
-                    background: `${stage.color}22`,
+                    background: `${stage.color}1a`,
                     color: stage.color,
                     display: "grid",
                     placeItems: "center",
@@ -232,13 +232,13 @@ export function AgentPipeline({ currentStage = "idle" }) {
                 </span>
               </div>
 
-              <div style={{ fontSize: "13px", fontWeight: "700", color: "#f1f5f9", marginBottom: "4px" }}>
+              <div style={{ fontSize: "13px", fontWeight: "700", color: "var(--text-primary)", marginBottom: "4px" }}>
                 {stage.title.split(". ")[1]}
               </div>
-              <div style={{ fontSize: "11px", color: "#818cf8", fontWeight: "600", marginBottom: "6px" }}>
+              <div style={{ fontSize: "11px", color: "var(--primary-text)", fontWeight: "600", marginBottom: "6px" }}>
                 {stage.agent}
               </div>
-              <div style={{ fontSize: "11.5px", color: "#94a3b8", lineHeight: "1.4" }}>
+              <div style={{ fontSize: "11.5px", color: "var(--text-secondary)", lineHeight: "1.4" }}>
                 {stage.summary}
               </div>
             </div>
@@ -252,7 +252,7 @@ export function AgentPipeline({ currentStage = "idle" }) {
           style={{
             marginTop: "18px",
             padding: "16px 20px",
-            background: "#111827",
+            background: "var(--bg-card-hover)",
             borderRadius: "10px",
             border: `1px solid ${selectedStage.color}40`,
             display: "flex",
@@ -275,10 +275,10 @@ export function AgentPipeline({ currentStage = "idle" }) {
               {selectedStage.icon}
             </div>
             <div>
-              <div style={{ fontSize: "14px", fontWeight: "700", color: "#ffffff" }}>
+              <div style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-primary)" }}>
                 {selectedStage.title} · <span style={{ color: selectedStage.color }}>{selectedStage.agent}</span>
               </div>
-              <div style={{ fontSize: "13px", color: "#cbd5e1", marginTop: "4px" }}>
+              <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
                 {selectedStage.details}
               </div>
             </div>

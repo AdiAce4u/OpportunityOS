@@ -41,6 +41,7 @@ function OpportunityOSApp() {
   const [interviewEvent, setInterviewEvent] = useState(null);
   const [interviewPrep, setInterviewPrep] = useState(null);
   const [isCustomJDOpen, setIsCustomJDOpen] = useState(false);
+  const [activeGoal, setActiveGoal] = useState("Robotics or AI Internships in India (≥₹40,000/mo)");
   const [toastMessage, setToastMessage] = useState("");
 
   const showToast = (msg) => {
@@ -95,13 +96,17 @@ function OpportunityOSApp() {
         }
       }
 
-      const res = await api.runAgent(profileId, {
-        roles: profile?.preferred_roles || ["Robotics Intern", "Robotics Software Intern", "ML Intern"],
-        locations: profile?.preferred_locations || ["India", "Bangalore", "Hyderabad", "Remote"],
-        skills: profile?.skills || ["Python", "C++", "ROS2", "Machine Learning"],
-        minimum_salary: profile?.minimum_salary || 40000,
-        target_count: 15,
-      });
+      const res = await api.runAgent(
+        profileId,
+        {
+          roles: profile?.preferred_roles || ["Robotics Intern", "Robotics Software Intern", "ML Intern"],
+          locations: profile?.preferred_locations || ["India", "Bangalore", "Hyderabad", "Remote"],
+          skills: profile?.skills || ["Python", "C++", "ROS2", "Machine Learning"],
+          minimum_salary: profile?.minimum_salary || 40000,
+          target_count: 15,
+        },
+        activeGoal
+      );
 
       if (res.logs) {
         setLogs(res.logs);
@@ -215,13 +220,13 @@ function OpportunityOSApp() {
             position: "fixed",
             bottom: "24px",
             right: "24px",
-            background: "#1e1b4b",
-            border: "1px solid #4338ca",
-            color: "#e0e7ff",
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-active)",
+            color: "var(--text-primary)",
             padding: "14px 20px",
             borderRadius: "10px",
             zIndex: 200,
-            boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+            boxShadow: "var(--card-shadow-hover)",
             fontSize: "13.5px",
             fontWeight: "600",
             display: "flex",
@@ -229,7 +234,7 @@ function OpportunityOSApp() {
             gap: "10px",
           }}
         >
-          <Sparkles size={16} color="#818cf8" />
+          <Sparkles size={16} color="var(--primary)" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -250,7 +255,11 @@ function OpportunityOSApp() {
           onStopAgent={handleStopAgent}
           onRefresh={loadData}
           onOpenCustomJD={() => setIsCustomJDOpen(true)}
-          activeGoal="Robotics or AI Internships in India (≥₹40,000/mo)"
+          activeGoal={activeGoal}
+          onUpdateGoal={(newGoal) => {
+            setActiveGoal(newGoal);
+            showToast(`Autonomous target goal updated: "${newGoal}"`);
+          }}
         />
 
         <div className="page-body">
@@ -258,8 +267,8 @@ function OpportunityOSApp() {
           {interviewEvents.length > 0 && (
             <div
               style={{
-                background: "linear-gradient(90deg, #1e1b4b 0%, #172554 100%)",
-                border: "1px solid #3b82f6",
+                background: "var(--banner-interview-bg)",
+                border: "1px solid var(--banner-interview-border)",
                 borderRadius: "12px",
                 padding: "16px 24px",
                 marginBottom: "24px",
@@ -267,6 +276,7 @@ function OpportunityOSApp() {
                 alignItems: "center",
                 justifyContent: "space-between",
                 gap: "16px",
+                boxShadow: "var(--card-shadow)",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
@@ -275,7 +285,7 @@ function OpportunityOSApp() {
                     width: "40px",
                     height: "40px",
                     borderRadius: "10px",
-                    background: "#2563eb",
+                    background: "var(--primary)",
                     color: "white",
                     display: "grid",
                     placeItems: "center",
@@ -284,10 +294,10 @@ function OpportunityOSApp() {
                   <Calendar size={20} />
                 </div>
                 <div>
-                  <h4 style={{ fontSize: "14.5px", fontWeight: "700", color: "#ffffff" }}>
+                  <h4 style={{ fontSize: "15px", fontWeight: "700", color: "var(--banner-interview-title)" }}>
                     {interviewEvents[0].company} invited you to an interview for {interviewEvents[0].role}!
                   </h4>
-                  <p style={{ fontSize: "12.5px", color: "#93c5fd", marginTop: "2px" }}>
+                  <p style={{ fontSize: "12.5px", color: "var(--banner-interview-sub)", marginTop: "2px", fontWeight: "500" }}>
                     Follow-up Agent detected an interview invitation: {interviewEvents[0].interview_details?.date || "Scheduled this week"}.
                   </p>
                 </div>
@@ -296,7 +306,7 @@ function OpportunityOSApp() {
               <button
                 className="btn btn-primary"
                 onClick={() => handleOpenInterviewPrep(interviewEvents[0])}
-                style={{ background: "#2563eb", whiteSpace: "nowrap" }}
+                style={{ whiteSpace: "nowrap" }}
               >
                 <span>[PREPARE INTERVIEW]</span>
               </button>
@@ -308,13 +318,13 @@ function OpportunityOSApp() {
             <div>
               {/* Header Hero */}
               <div style={{ marginBottom: "24px" }}>
-                <p style={{ fontSize: "12px", fontWeight: "700", color: "#818cf8", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                <p style={{ fontSize: "12px", fontWeight: "700", color: "var(--primary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
                   Autonomous Agentic Job Application Platform
                 </p>
-                <h1 style={{ fontSize: "32px", fontWeight: "800", color: "#ffffff", margin: "4px 0 8px" }}>
-                  Opportunity<span style={{ color: "#818cf8" }}>OS</span> Engine
+                <h1 style={{ fontSize: "32px", fontWeight: "800", color: "var(--text-primary)", margin: "4px 0 8px" }}>
+                  Opportunity<span style={{ color: "var(--primary)" }}>OS</span> Engine
                 </h1>
-                <p style={{ fontSize: "14px", color: "#94a3b8" }}>
+                <p style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
                   Autonomously discovers opportunities, verifies eligibility, tailors your resume, prepares answers, pauses for your approval, and executes browser applications.
                 </p>
               </div>
@@ -357,10 +367,10 @@ function OpportunityOSApp() {
           {currentTab === "pipeline" && (
             <div>
               <div style={{ marginBottom: "24px" }}>
-                <h2 style={{ fontSize: "24px", fontWeight: "800", color: "#ffffff" }}>
+                <h2 style={{ fontSize: "24px", fontWeight: "800", color: "var(--text-primary)" }}>
                   Agentic Multi-Agent Pipeline
                 </h2>
-                <p style={{ fontSize: "14px", color: "#94a3b8", marginTop: "4px" }}>
+                <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
                   LangGraph workflow orchestration connecting the 9 specialized agents.
                 </p>
               </div>
@@ -375,10 +385,10 @@ function OpportunityOSApp() {
           {currentTab === "applications" && (
             <div>
               <div style={{ marginBottom: "24px" }}>
-                <h2 style={{ fontSize: "24px", fontWeight: "800", color: "#ffffff" }}>
+                <h2 style={{ fontSize: "24px", fontWeight: "800", color: "var(--text-primary)" }}>
                   Applications & Review Center
                 </h2>
-                <p style={{ fontSize: "14px", color: "#94a3b8", marginTop: "4px" }}>
+                <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
                   Review prepared packages, inspect tailored resumes, and authorize browser automation.
                 </p>
               </div>
@@ -393,10 +403,10 @@ function OpportunityOSApp() {
           {currentTab === "opportunities" && (
             <div>
               <div style={{ marginBottom: "24px" }}>
-                <h2 style={{ fontSize: "24px", fontWeight: "800", color: "#ffffff" }}>
+                <h2 style={{ fontSize: "24px", fontWeight: "800", color: "var(--text-primary)" }}>
                   Discovered Opportunities Repository
                 </h2>
-                <p style={{ fontSize: "14px", color: "#94a3b8", marginTop: "4px" }}>
+                <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
                   Raw and normalized job listings discovered across company career pages and job boards.
                 </p>
               </div>
@@ -423,10 +433,10 @@ function OpportunityOSApp() {
           {currentTab === "interview" && (
             <div>
               <div style={{ marginBottom: "24px" }}>
-                <h2 style={{ fontSize: "24px", fontWeight: "800", color: "#ffffff" }}>
+                <h2 style={{ fontSize: "24px", fontWeight: "800", color: "var(--text-primary)" }}>
                   Interview Copilot & Follow-ups
                 </h2>
-                <p style={{ fontSize: "14px", color: "#94a3b8", marginTop: "4px" }}>
+                <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginTop: "4px" }}>
                   Detected invitations, automated reminders, and company research briefings.
                 </p>
               </div>
@@ -448,10 +458,10 @@ function OpportunityOSApp() {
                         <span className="badge badge-success" style={{ marginBottom: "6px" }}>
                           INVITATION VERIFIED
                         </span>
-                        <h4 style={{ fontSize: "16px", fontWeight: "700", color: "#ffffff" }}>
+                        <h4 style={{ fontSize: "16px", fontWeight: "700", color: "var(--text-primary)" }}>
                           {evt.company} — {evt.role}
                         </h4>
-                        <p style={{ fontSize: "13px", color: "#94a3b8", marginTop: "4px" }}>
+                        <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "4px" }}>
                           {evt.subject} · {evt.interview_details?.date}
                         </p>
                       </div>
@@ -466,7 +476,7 @@ function OpportunityOSApp() {
                   ))}
                 </div>
               ) : (
-                <div className="card" style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+                <div className="card" style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
                   No interview invitations detected yet. The Follow-up agent continuously monitors application portals.
                 </div>
               )}

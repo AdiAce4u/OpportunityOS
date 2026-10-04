@@ -13,7 +13,7 @@ export function InterviewPrepModal({ event, prepData, onClose }) {
       style={{
         position: "fixed",
         inset: 0,
-        backgroundColor: "rgba(3, 7, 18, 0.8)",
+        backgroundColor: "var(--modal-overlay)",
         backdropFilter: "blur(8px)",
         display: "grid",
         placeItems: "center",
@@ -29,9 +29,9 @@ export function InterviewPrepModal({ event, prepData, onClose }) {
           display: "flex",
           flexDirection: "column",
           borderRadius: "16px",
-          background: "#0c1324",
-          border: "1px solid #1e293b",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.7)",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-subtle)",
+          boxShadow: "var(--card-shadow-hover)",
           overflow: "hidden",
         }}
       >
@@ -39,22 +39,22 @@ export function InterviewPrepModal({ event, prepData, onClose }) {
         <div
           style={{
             padding: "24px 28px",
-            borderBottom: "1px solid #1e293b",
+            borderBottom: "1px solid var(--border-subtle)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-start",
-            background: "#090f1d",
+            background: "var(--bg-card)",
           }}
         >
           <div>
             <span className="badge badge-success" style={{ marginBottom: "6px" }}>
               INTERVIEW INVITATION DETECTED
             </span>
-            <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#ffffff" }}>
+            <h2 style={{ fontSize: "20px", fontWeight: "800", color: "var(--text-primary)" }}>
               Interview Copilot: {company}
             </h2>
-            <div style={{ fontSize: "13px", color: "#94a3b8", marginTop: "2px" }}>
-              Role: <strong style={{ color: "#cbd5e1" }}>{role}</strong>
+            <div style={{ fontSize: "13px", color: "var(--text-secondary)", marginTop: "2px" }}>
+              Role: <strong style={{ color: "var(--text-primary)" }}>{role}</strong>
             </div>
           </div>
 
@@ -63,7 +63,7 @@ export function InterviewPrepModal({ event, prepData, onClose }) {
             style={{
               background: "transparent",
               border: "none",
-              color: "#64748b",
+              color: "var(--text-muted)",
               cursor: "pointer",
             }}
           >
@@ -74,22 +74,22 @@ export function InterviewPrepModal({ event, prepData, onClose }) {
         {/* Schedule Pill Banner */}
         <div
           style={{
-            background: "#1e1b4b",
-            borderBottom: "1px solid #312e81",
+            background: "var(--banner-interview-bg)",
+            borderBottom: "1px solid var(--banner-interview-border)",
             padding: "14px 28px",
             display: "flex",
             alignItems: "center",
             gap: "24px",
             fontSize: "13px",
-            color: "#c7d2fe",
+            color: "var(--banner-interview-title)",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Calendar size={16} color="#818cf8" />
+            <Calendar size={16} color="var(--primary)" />
             <span>Scheduled: <strong>{details.date || "Upcoming"}</strong></span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Video size={16} color="#818cf8" />
+            <Video size={16} color="var(--primary)" />
             <span>Round: <strong>{details.round || "Technical Discussion"}</strong></span>
           </div>
         </div>
@@ -97,23 +97,23 @@ export function InterviewPrepModal({ event, prepData, onClose }) {
         {/* Prep Content */}
         <div style={{ padding: "24px 28px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "18px" }}>
           {/* Company Briefing */}
-          <div style={{ background: "#080c16", border: "1px solid #1a233a", padding: "16px", borderRadius: "10px" }}>
+          <div style={{ background: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", padding: "16px", borderRadius: "10px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-              <BookOpen size={16} color="#818cf8" />
-              <h4 style={{ fontSize: "14px", fontWeight: "700", color: "#ffffff" }}>Company Architecture & Domain</h4>
+              <BookOpen size={16} color="var(--primary)" />
+              <h4 style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-primary)" }}>Company Architecture & Domain</h4>
             </div>
-            <p style={{ fontSize: "13px", color: "#cbd5e1", lineHeight: "1.6" }}>
+            <p style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.6" }}>
               {prepData?.company_briefing || `${company} specializes in high-reliability autonomous systems and robotics pipelines.`}
             </p>
           </div>
 
           {/* Recommended Talking Points */}
-          <div style={{ background: "#080c16", border: "1px solid #1a233a", padding: "16px", borderRadius: "10px" }}>
+          <div style={{ background: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", padding: "16px", borderRadius: "10px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
-              <CheckCircle size={16} color="#10b981" />
-              <h4 style={{ fontSize: "14px", fontWeight: "700", color: "#ffffff" }}>Tailored Talking Points (Based on Your Resume)</h4>
+              <CheckCircle size={16} color="var(--accent-emerald)" />
+              <h4 style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-primary)" }}>Tailored Talking Points (Based on Your Resume)</h4>
             </div>
-            <ul style={{ paddingLeft: "18px", fontSize: "13px", color: "#cbd5e1", lineHeight: "1.6" }}>
+            <ul style={{ paddingLeft: "18px", fontSize: "13px", color: "var(--text-secondary)", lineHeight: "1.6" }}>
               {(prepData?.recommended_talking_points || [
                 "Highlight your dynamic quadruped locomotion controllers and low-latency ROS2 nodes.",
                 "Discuss LiDAR Cartographer SLAM tuning and Nav2 costmap parameter configuration.",
@@ -125,10 +125,10 @@ export function InterviewPrepModal({ event, prepData, onClose }) {
           </div>
 
           {/* Probable Technical Questions */}
-          <div style={{ background: "#080c16", border: "1px solid #1a233a", padding: "16px", borderRadius: "10px" }}>
+          <div style={{ background: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", padding: "16px", borderRadius: "10px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
-              <HelpCircle size={16} color="#f59e0b" />
-              <h4 style={{ fontSize: "14px", fontWeight: "700", color: "#ffffff" }}>Expected Technical Interview Questions</h4>
+              <HelpCircle size={16} color="var(--accent-amber)" />
+              <h4 style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-primary)" }}>Expected Technical Interview Questions</h4>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {(prepData?.probable_technical_questions || [
@@ -136,7 +136,7 @@ export function InterviewPrepModal({ event, prepData, onClose }) {
                 "How do you address sensor noise and odometry drift when integrating IMU and wheel encoders?",
                 "What strategies do you use for profiling and optimizing real-time C++ routines on embedded hardware?"
               ]).map((q, idx) => (
-                <div key={idx} style={{ background: "#111827", padding: "10px 14px", borderRadius: "6px", fontSize: "12.5px", color: "#e2e8f0" }}>
+                <div key={idx} style={{ background: "var(--bg-card-hover)", border: "1px solid var(--border-subtle)", padding: "10px 14px", borderRadius: "6px", fontSize: "12.5px", color: "var(--text-primary)" }}>
                   <strong>Q{idx + 1}:</strong> {q}
                 </div>
               ))}
@@ -148,8 +148,8 @@ export function InterviewPrepModal({ event, prepData, onClose }) {
         <div
           style={{
             padding: "16px 28px",
-            background: "#090f1d",
-            borderTop: "1px solid #1e293b",
+            background: "var(--bg-card)",
+            borderTop: "1px solid var(--border-subtle)",
             display: "flex",
             justifyContent: "flex-end",
           }}

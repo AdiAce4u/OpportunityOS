@@ -57,7 +57,7 @@ export function CustomJDModal({ isOpen, onClose, onJobCreated, profileId }) {
       style={{
         position: "fixed",
         inset: 0,
-        backgroundColor: "rgba(3, 7, 18, 0.8)",
+        backgroundColor: "var(--modal-overlay)",
         backdropFilter: "blur(8px)",
         display: "grid",
         placeItems: "center",
@@ -73,9 +73,9 @@ export function CustomJDModal({ isOpen, onClose, onJobCreated, profileId }) {
           display: "flex",
           flexDirection: "column",
           borderRadius: "16px",
-          background: "#0c1324",
-          border: "1px solid #1e293b",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.7)",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-subtle)",
+          boxShadow: "var(--card-shadow-hover)",
           overflow: "hidden",
         }}
       >
@@ -83,11 +83,11 @@ export function CustomJDModal({ isOpen, onClose, onJobCreated, profileId }) {
         <div
           style={{
             padding: "20px 28px",
-            borderBottom: "1px solid #1e293b",
+            borderBottom: "1px solid var(--border-subtle)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            background: "#090f1d",
+            background: "var(--bg-card)",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -96,20 +96,20 @@ export function CustomJDModal({ isOpen, onClose, onJobCreated, profileId }) {
                 width: "36px",
                 height: "36px",
                 borderRadius: "8px",
-                background: "#1e1b4b",
-                border: "1px solid #4338ca",
+                background: "var(--primary-subtle)",
+                border: "1px solid var(--border-active)",
                 display: "grid",
                 placeItems: "center",
-                color: "#818cf8",
+                color: "var(--primary)",
               }}
             >
               <FileCode size={20} />
             </div>
             <div>
-              <h3 style={{ fontSize: "18px", fontWeight: "800", color: "#ffffff", margin: 0 }}>
+              <h3 style={{ fontSize: "18px", fontWeight: "800", color: "var(--text-primary)", margin: 0 }}>
                 On-Demand Custom JD Analyzer
               </h3>
-              <p style={{ fontSize: "12px", color: "#94a3b8", margin: 0 }}>
+              <p style={{ fontSize: "12px", color: "var(--text-secondary)", margin: 0 }}>
                 Paste any external job description to parse requirements, check eligibility, and generate evidence citations.
               </p>
             </div>
@@ -120,7 +120,7 @@ export function CustomJDModal({ isOpen, onClose, onJobCreated, profileId }) {
             style={{
               background: "transparent",
               border: "none",
-              color: "#64748b",
+              color: "var(--text-muted)",
               cursor: "pointer",
               padding: "6px",
             }}
@@ -134,9 +134,9 @@ export function CustomJDModal({ isOpen, onClose, onJobCreated, profileId }) {
           {error && (
             <div
               style={{
-                background: "#451a03",
-                border: "1px solid #78350f",
-                color: "#fef3c7",
+                background: "var(--accent-amber-subtle)",
+                border: "1px solid var(--accent-amber-border)",
+                color: "var(--accent-amber-text)",
                 padding: "10px 14px",
                 borderRadius: "8px",
                 fontSize: "13px",
@@ -151,7 +151,7 @@ export function CustomJDModal({ isOpen, onClose, onJobCreated, profileId }) {
             <form onSubmit={handleAnalyze} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
                 <div>
-                  <label style={{ fontSize: "12px", fontWeight: "600", color: "#94a3b8", display: "block", marginBottom: "6px" }}>
+                  <label style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
                     Job Title (Optional - auto-inferred if blank)
                   </label>
                   <input
@@ -163,7 +163,7 @@ export function CustomJDModal({ isOpen, onClose, onJobCreated, profileId }) {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: "12px", fontWeight: "600", color: "#94a3b8", display: "block", marginBottom: "6px" }}>
+                  <label style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
                     Company / Organization (Optional)
                   </label>
                   <input
@@ -177,7 +177,7 @@ export function CustomJDModal({ isOpen, onClose, onJobCreated, profileId }) {
               </div>
 
               <div>
-                <label style={{ fontSize: "12px", fontWeight: "600", color: "#94a3b8", display: "block", marginBottom: "6px" }}>
+                <label style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
                   Paste Full Job Description Text *
                 </label>
                 <textarea
@@ -204,8 +204,8 @@ export function CustomJDModal({ isOpen, onClose, onJobCreated, profileId }) {
               {/* Job Header Card */}
               <div
                 style={{
-                  background: "#080c16",
-                  border: "1px solid #1a233a",
+                  background: "var(--bg-card-subtle)",
+                  border: "1px solid var(--border-subtle)",
                   borderRadius: "12px",
                   padding: "18px 20px",
                   display: "flex",
@@ -222,39 +222,39 @@ export function CustomJDModal({ isOpen, onClose, onJobCreated, profileId }) {
                       {analysisResult.is_eligible ? "Eligible" : "Eligibility Warning"}
                     </span>
                   </div>
-                  <h3 style={{ fontSize: "18px", fontWeight: "800", color: "#ffffff", margin: "4px 0" }}>
+                  <h3 style={{ fontSize: "18px", fontWeight: "800", color: "var(--text-primary)", margin: "4px 0" }}>
                     {analysisResult.job?.title}
                   </h3>
-                  <div style={{ display: "flex", gap: "16px", fontSize: "12.5px", color: "#94a3b8", marginTop: "4px" }}>
+                  <div style={{ display: "flex", gap: "16px", fontSize: "12.5px", color: "var(--text-secondary)", marginTop: "4px" }}>
                     <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                       <MapPin size={13} /> {analysisResult.job?.location}
                     </span>
-                    <span style={{ display: "flex", alignItems: "center", gap: "4px", color: "#38bdf8" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: "4px", color: "var(--accent-cyan-text)" }}>
                       <DollarSign size={13} /> {analysisResult.job?.salary_text}
                     </span>
                   </div>
                 </div>
 
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: "32px", fontWeight: "900", color: "#10b981", lineHeight: "1" }}>
+                  <div style={{ fontSize: "32px", fontWeight: "900", color: "var(--accent-emerald)", lineHeight: "1" }}>
                     {analysisResult.match_score}%
                   </div>
-                  <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>
+                  <div style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: "700", textTransform: "uppercase" }}>
                     Match Score
                   </div>
                 </div>
               </div>
 
               {/* Fit Reason */}
-              <div style={{ background: "#080c16", border: "1px solid #1a233a", borderRadius: "10px", padding: "14px 18px" }}>
-                <span style={{ fontSize: "11px", fontWeight: "700", color: "#818cf8", textTransform: "uppercase" }}>
+              <div style={{ background: "var(--bg-card-subtle)", border: "1px solid var(--border-subtle)", borderRadius: "10px", padding: "14px 18px" }}>
+                <span style={{ fontSize: "11px", fontWeight: "700", color: "var(--primary)", textTransform: "uppercase" }}>
                   Deterministic Assessment
                 </span>
-                <p style={{ fontSize: "13px", color: "#e2e8f0", margin: "4px 0 0" }}>
+                <p style={{ fontSize: "13px", color: "var(--text-primary)", margin: "4px 0 0" }}>
                   {analysisResult.reason}
                 </p>
                 {!analysisResult.is_eligible && (
-                  <p style={{ fontSize: "12px", color: "#f87171", margin: "6px 0 0" }}>
+                  <p style={{ fontSize: "12px", color: "var(--accent-rose-text)", margin: "6px 0 0" }}>
                     Eligibility notice: {analysisResult.eligibility_reason}
                   </p>
                 )}
@@ -263,19 +263,19 @@ export function CustomJDModal({ isOpen, onClose, onJobCreated, profileId }) {
               {/* 1-to-1 Evidence Citation Table */}
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                  <Layers size={16} color="#818cf8" />
-                  <h4 style={{ fontSize: "14px", fontWeight: "700", color: "#ffffff", margin: 0 }}>
+                  <Layers size={16} color="var(--primary)" />
+                  <h4 style={{ fontSize: "14px", fontWeight: "700", color: "var(--text-primary)", margin: 0 }}>
                     1-to-1 Evidence Citation Table
                   </h4>
                 </div>
 
-                <div style={{ overflowX: "auto", border: "1px solid #1a233a", borderRadius: "10px" }}>
+                <div style={{ overflowX: "auto", border: "1px solid var(--border-subtle)", borderRadius: "10px" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12.5px" }}>
                     <thead>
-                      <tr style={{ background: "#090f1d", borderBottom: "1px solid #1e293b", textAlign: "left" }}>
-                        <th style={{ padding: "10px 14px", color: "#94a3b8", fontWeight: "600" }}>Requirement</th>
-                        <th style={{ padding: "10px 14px", color: "#94a3b8", fontWeight: "600" }}>Candidate Evidence</th>
-                        <th style={{ padding: "10px 14px", color: "#94a3b8", fontWeight: "600", width: "110px" }}>Rating</th>
+                      <tr style={{ background: "var(--bg-well)", borderBottom: "1px solid var(--border-subtle)", textAlign: "left" }}>
+                        <th style={{ padding: "10px 14px", color: "var(--text-muted)", fontWeight: "600" }}>Requirement</th>
+                        <th style={{ padding: "10px 14px", color: "var(--text-muted)", fontWeight: "600" }}>Candidate Evidence</th>
+                        <th style={{ padding: "10px 14px", color: "var(--text-muted)", fontWeight: "600", width: "110px" }}>Rating</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -283,14 +283,14 @@ export function CustomJDModal({ isOpen, onClose, onJobCreated, profileId }) {
                         <tr
                           key={idx}
                           style={{
-                            borderBottom: "1px solid #162032",
-                            background: idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)",
+                            borderBottom: "1px solid var(--border-subtle)",
+                            background: idx % 2 === 0 ? "transparent" : "var(--bg-well)",
                           }}
                         >
-                          <td style={{ padding: "10px 14px", fontWeight: "600", color: "#f1f5f9" }}>
+                          <td style={{ padding: "10px 14px", fontWeight: "600", color: "var(--text-primary)" }}>
                             {item.requirement}
                           </td>
-                          <td style={{ padding: "10px 14px", color: "#cbd5e1" }}>
+                          <td style={{ padding: "10px 14px", color: "var(--text-secondary)" }}>
                             {item.evidence}
                           </td>
                           <td style={{ padding: "10px 14px" }}>
@@ -300,8 +300,9 @@ export function CustomJDModal({ isOpen, onClose, onJobCreated, profileId }) {
                                   display: "inline-flex",
                                   alignItems: "center",
                                   gap: "4px",
-                                  background: "#064e3b",
-                                  color: "#34d399",
+                                  background: "var(--accent-emerald-subtle)",
+                                  color: "var(--accent-emerald-text)",
+                                  border: "1px solid var(--accent-emerald-border)",
                                   padding: "2px 7px",
                                   borderRadius: "4px",
                                   fontSize: "11px",
@@ -317,8 +318,9 @@ export function CustomJDModal({ isOpen, onClose, onJobCreated, profileId }) {
                                   display: "inline-flex",
                                   alignItems: "center",
                                   gap: "4px",
-                                  background: "#451a03",
-                                  color: "#fbbf24",
+                                  background: "var(--accent-amber-subtle)",
+                                  color: "var(--accent-amber-text)",
+                                  border: "1px solid var(--accent-amber-border)",
                                   padding: "2px 7px",
                                   borderRadius: "4px",
                                   fontSize: "11px",
@@ -333,8 +335,9 @@ export function CustomJDModal({ isOpen, onClose, onJobCreated, profileId }) {
                                 style={{
                                   display: "inline-flex",
                                   alignItems: "center",
-                                  background: "#1e293b",
-                                  color: "#94a3b8",
+                                  background: "var(--bg-well)",
+                                  color: "var(--text-muted)",
+                                  border: "1px solid var(--border-subtle)",
                                   padding: "2px 7px",
                                   borderRadius: "4px",
                                   fontSize: "11px",

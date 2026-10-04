@@ -36,6 +36,34 @@ def run_agent_workflow(request: AgentRunRequest, db: Session = Depends(get_db)):
         "target_count": 12
     }
 
+    if request.free_form_goal:
+        goal_text = request.free_form_goal.strip()
+        goal_dict["free_form_goal"] = goal_text
+        
+        # Infer target roles from free-form goal keywords
+        inferred_roles = []
+        low = goal_text.lower()
+        if "robot" in low or "ros" in low:
+            inferred_roles.extend(["Robotics Intern", "Robotics Software Intern"])
+        if any(k in low for k in ["ai", "ml", "machine learning", "deep learning", "vision"]):
+            inferred_roles.extend(["ML Intern", "AI Engineer Intern"])
+        if any(k in low for k in ["embedded", "firmware", "hardware"]):
+            inferred_roles.extend(["Embedded Systems Intern", "Firmware Engineer"])
+        if any(k in low for k in ["full-stack", "fullstack", "software", "backend", "frontend", "sde"]):
+            inferred_roles.extend(["Software Engineering Intern", "Full-Stack Engineer"])
+            
+        if inferred_roles:
+            goal_dict["roles"] = list(dict.fromkeys(inferred_roles + goal_dict.get("roles", [])))
+            
+        # Parse salary threshold if present in text
+        import re
+        sal_match = re.search(r"(?:₹|rs\.?|inr)\s*([\d,]+)", goal_text, re.IGNORECASE)
+        if sal_match:
+            try:
+                goal_dict["minimum_salary"] = float(sal_match.group(1).replace(",", ""))
+            except ValueError:
+                pass
+
     initial_state = {
         "profile_id": profile.id,
         "search_goal": goal_dict,

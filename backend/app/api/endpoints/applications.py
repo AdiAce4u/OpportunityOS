@@ -197,9 +197,31 @@ def prepare_portal(application_id: int, db: Session = Depends(get_db)):
 
 @router.get("/{application_id}/resume-pdf")
 def download_resume_pdf(application_id: int, db: Session = Depends(get_db)):
+    """
+    Returns the tailored ATS PDF resume for this application.
+    If the PDF file has not yet been generated on disk, dynamically compiles it on demand
+    using the tailored_resume text so it is always viewable and downloadable.
+    """
     row = db.get(Application, application_id)
-    if not row or not row.tailored_resume_pdf_path:
-        raise HTTPException(404, "Resume PDF not generated for this application")
-    if not os.path.exists(row.tailored_resume_pdf_path):
-        raise HTTPException(404, "PDF file missing on server")
-    return FileResponse(row.tailored_resume_pdf_path, media_type="application/pdf", filename=os.path.basename(row.tailored_resume_pdf_path))
+    if not row:
+        raise HTTPException(404, "Application not found")
+        
+    os.makedirs("uploads", exist_ok=True)
+    pdf_path = row.tailored_resume_pdf_path
+    
+    if not pdf_path or not os.path.exists(pdf_path):
+        from app.tools.resume_tools import generate_resume_pdf
+        pdf_filename = f"Tailored_Resume_App_{row.id}.pdf"
+        pdf_path = os.path.join("uploads", pdf_filename)
+        resume_content = row.tailored_resume or "Candidate Tailored Resume"
+        generate_resume_pdf(resume_content, pdf_path)
+        row.tailored_resume_pdf_path = pdf_path
+        db.commit()
+        
+    filename = os.path.basename(pdf_path)
+    return FileResponse(
+        pdf_path,
+        media_type="application/pdf",
+        filename=filename,
+        headers={"Content-Disposition": f"inline; filename={filename}"}
+    )
