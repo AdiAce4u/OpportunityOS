@@ -1,19 +1,41 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.models import Application, Job, FollowUpEvent
+from app.models import Application, Job, FollowUpEvent, UserProfile
 from app.tools.research_tools import research_company
 
 router = APIRouter(prefix="/tracker", tags=["Tracker & Follow-ups"])
 
 @router.get("/dashboard")
 def get_dashboard_metrics(db: Session = Depends(get_db)):
+    profile = db.query(UserProfile).first()
+    has_cv = bool(
+        profile and (
+            profile.master_cv_markdown
+            or (profile.projects and len(profile.projects) > 0)
+            or profile.resume_text
+        )
+    )
+
+    if not has_cv:
+        return {
+            "total_opportunities_found": 0,
+            "eligible_opportunities": 0,
+            "shortlisted": 0,
+            "applications_prepared": 0,
+            "applications_submitted": 0,
+            "interviews": 0,
+            "offers": 0,
+            "rejections": 0,
+            "estimated_time_saved_hours": 0.0,
+        }
+
     total_jobs = db.query(Job).count()
     apps = db.query(Application).all()
     
     total_apps = len(apps)
     prepared = len([a for a in apps if a.status in ["PREPARING", "AWAITING_APPROVAL"]])
-    submitted = len([a for a in apps if "SUBMIT" in a.status or a.status == "UNDER_REVIEW"])
+    submitted = len([a for a in apps if "SUBMIT" in (a.status or "") or a.status == "UNDER_REVIEW"])
     interviews = len([a for a in apps if a.status == "INTERVIEW"])
     
     # Also check follow-up events for detected interviews
@@ -21,16 +43,16 @@ def get_dashboard_metrics(db: Session = Depends(get_db)):
     interviews = max(interviews, interview_events)
     
     offers = len([a for a in apps if a.status == "OFFER"])
-    rejections = len([a for a in apps if "REJECT" in a.status])
+    rejections = len([a for a in apps if "REJECT" in (a.status or "")])
     shortlisted = len([a for a in apps if a.match_score and a.match_score >= 70.0])
     
-    # Estimated time saved: ~45 mins searching + 30 mins tailoring resume + 30 mins cover letter/form filling
-    hours_saved = round((total_apps * 1.75) + (total_jobs * 0.1), 1)
+    # Time saved: ~1.75 hrs per prepared application
+    hours_saved = round((total_apps * 1.75) + (total_jobs * 0.05 if total_apps > 0 else 0), 1)
 
     return {
-        "total_opportunities_found": max(total_jobs, 28),
-        "eligible_opportunities": max(total_jobs - 2, 14),
-        "shortlisted": max(shortlisted, 6),
+        "total_opportunities_found": total_jobs,
+        "eligible_opportunities": total_jobs,
+        "shortlisted": shortlisted,
         "applications_prepared": total_apps,
         "applications_submitted": submitted,
         "interviews": interviews,

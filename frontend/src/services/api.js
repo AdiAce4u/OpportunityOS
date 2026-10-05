@@ -47,6 +47,12 @@ export const api = {
     return api.uploadMasterCV(file, profileId);
   },
 
+  reclassifyProjects: (profileId = null) =>
+    fetchJson("/profiles/reclassify-projects", {
+      method: "POST",
+      body: JSON.stringify({ profile_id: profileId }),
+    }),
+
   // Real-Time Portal Search (LinkedIn, Wellfound, Indeed, Glassdoor)
   getJobCategories: () => fetchJson("/jobs/categories"),
   searchJobPortals: (searchParams) =>
@@ -96,6 +102,13 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ answers }),
     }),
+  updateApplicationDraft: (appId, data) =>
+    fetchJson(`/applications/${appId}/update-draft`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  resetAllProfiles: () =>
+    fetchJson("/profiles/reset-all", { method: "POST" }),
   getResumePdfUrl: (applicationId) =>
     `${API_BASE}/applications/${applicationId}/resume-pdf`,
 

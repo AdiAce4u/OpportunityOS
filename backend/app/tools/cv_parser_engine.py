@@ -6,42 +6,47 @@ from pypdf import PdfReader
 
 DOMAIN_KEYWORDS = {
     "finance": [
-        "finance", "financial", "trading", "quant", "quantitative", "order book", "arbitrage", "risk", "portfolio",
-        "derivatives", "market", "equity", "fixed income", "banking", "black-scholes", "monte carlo",
+        "finance", "financial", "trading", "quant", "quantitative analyst", "order book", "arbitrage", "portfolio",
+        "derivatives", "equity", "fixed income", "banking", "black-scholes", "monte carlo",
         "algorithmic trading", "backtesting", "crypto", "hedge fund", "asset management", "financial analysis",
-        "sharpe ratio", "mean-variance", "bayesian portfolio", "stock", "options", "futures", "volatility",
-        "yield", "credit risk", "scorecard", "quadprog", "asset allocation", "alpha"
+        "sharpe ratio", "mean-variance", "bayesian portfolio", "stock forecasting", "options pricing", "futures", "volatility",
+        "credit risk", "scorecard", "quadprog", "asset allocation", "alpha", "stock price", "stock", "stocks"
     ],
     "sde": [
-        "backend", "frontend", "fullstack", "full-stack", "microservices", "api", "apis", "grpc", "rest",
-        "react", "react.js", "next.js", "spring", "django", "fastapi", "flask", "node.js", "node", "express",
+        "backend", "frontend", "fullstack", "full-stack", "microservices", "api", "apis", "grpc", "rest api",
+        "react", "react.js", "next.js", "spring boot", "django", "fastapi", "flask", "node.js", "express.js",
         "docker", "kubernetes", "sql", "postgres", "postgresql", "mongodb", "redis", "ci/cd", "golang",
-        "c++", "java", "typescript", "javascript", "graphql", "database", "distributed systems",
-        "software engineering", "git", "linux", "systems", "web development", "fsm", "state machine",
-        "web app", "blogsphere", "compiler", "operating systems"
+        "java", "typescript", "javascript", "graphql", "database", "distributed systems",
+        "software engineering", "web development", "fsm", "state machine",
+        "web app", "blogsphere", "compiler", "operating systems", "route optimization", "rail navigation"
     ],
     "data": [
-        "data", "spark", "kafka", "etl", "pandas", "numpy", "machine learning", "deep learning",
+        "data science", "data analytics", "spark", "kafka", "etl", "pandas", "numpy", "machine learning", "deep learning",
         "nlp", "rag", "llm", "llms", "pytorch", "tensorflow", "analytics", "computer vision", "transformers",
-        "scikit-learn", "data science", "neural network", "classification", "forecast", "forecasting", "prediction",
-        "xgboost", "time series", "bi", "tableau", "powerbi", "feature engineering", "bert", "gpt", "hugging face",
-        "genai", "generative ai", "diffusion", "segmentation", "clustering", "regression", "anomaly detection"
+        "scikit-learn", "neural network", "classification", "forecast", "forecasting", "prediction",
+        "xgboost", "time series", "tableau", "powerbi", "feature engineering", "bert", "gpt", "hugging face",
+        "genai", "generative ai", "diffusion", "segmentation", "clustering", "regression", "anomaly detection",
+        "skin lesion", "ham10000", "efficientnet", "qwen", "qlora", "unsloth", "quantization", "gradio",
+        "chatml", "entity extraction", "churn prediction", "crop health", "soil health", "vision analytics"
     ],
     "core": [
         "embedded", "firmware", "rtos", "microcontroller", "stm32", "arduino", "esp32", "ros", "ros2",
         "slam", "robotics", "vlsi", "verilog", "fpga", "hardware", "cad", "solidworks", "ansys",
-        "fea", "control systems", "pid", "kinematics", "dynamics", "mechanical", "mechatronics",
-        "motor driver", "sensor fusion", "autonomous", "actuator", "pcb", "can bus", "pure pursuit",
-        "rocker-bogie", "tiadcs", "converter", "boost converter", "formula student", "vehicle"
+        "fea", "control systems", "pid", "kinematics", "dynamics", "mechatronics",
+        "motor driver", "sensor fusion", "actuator", "pcb", "can bus", "pure pursuit",
+        "rocker-bogie", "tiadc", "boost converter", "buck converter", "formula student", "rover",
+        "steam turbine", "turbine", "thermal power", "power station", "rankine cycle", "boiler", "condenser",
+        "von mises", "stress field", "tachometer", "quadruped", "gait generation", "autonomous vehicle", "bicycle model",
+        "fixture", "fixturing", "engine", "torque", "mechanism", "degrees of freedom", "automotive", "motorcycle", "manufacturing"
     ],
     "consult": [
         "consulting", "strategy", "market entry", "due diligence", "profitability", "valuation",
         "operations", "financial modeling", "competitive analysis", "business intelligence", "cost reduction",
         "growth strategy", "supply chain", "framework", "advisory", "benchmarking", "feasibility",
-        "sustainable packaging"
+        "sustainable packaging", "content strategy"
     ],
     "product": [
-        "product", "product management", "roadmap", "user research", "ui/ux", "wireframe", "figma",
+        "product manager", "product management", "roadmap", "user research", "ui/ux", "wireframe", "figma",
         "agile", "scrum", "feature prioritization", "kpi", "okr", "user persona", "metrics", "a/b testing",
         "stakeholder", "mvp", "go-to-market", "gtm", "market research", "customer feedback", "telemedicine"
     ]
@@ -61,16 +66,56 @@ class MasterCVParser:
         for domain, keywords in DOMAIN_KEYWORDS.items():
             count = 0
             for kw in keywords:
-                # Count keyword occurrences with word boundary
+                # Count keyword occurrences strictly with word boundary
                 matches = len(re.findall(rf"\b{re.escape(kw)}\b", text_lower))
                 count += matches
             scores[domain] = count
 
-        # Priority resolution when scores tie
-        if scores.get("finance", 0) > 0 and any(k in text_lower for k in ["portfolio", "sharpe", "trading", "quant", "black-scholes", "mean-variance", "asset management"]):
-            scores["finance"] += 3
-        if scores.get("core", 0) > 0 and any(k in text_lower for k in ["robotics", "ros", "embedded", "solidworks", "ansys", "motor", "stm32", "microcontroller"]):
-            scores["core"] += 3
+        # Precise domain indicators with word boundaries
+        def has_any(keywords_list):
+            return any(re.search(rf"\b{re.escape(k)}\b", text_lower) for k in keywords_list)
+
+        finance_strong = [
+            "tata motors finance", "godrej housing finance", "sharpe ratio", "mean-variance",
+            "portfolio optimization", "bayesian portfolio", "stock forecasting", "black-scholes",
+            "algorithmic trading", "credit risk", "scorecard", "order book", "arbitrage"
+        ]
+        core_strong = [
+            "robotics", "ros", "ros2", "solidworks", "ansys", "stm32", "arduino", "esp32", "can bus",
+            "rover", "formula student", "mechatronics", "turbine", "power station", "rankine", "boiler",
+            "condenser", "tachometer", "quadruped", "gait generation", "kinematic bicycle model",
+            "bldc motor", "motor driver", "von mises", "fea"
+        ]
+        data_strong = [
+            "computer vision", "machine learning", "deep learning", "nlp", "llm", "llms", "qlora",
+            "unsloth", "skin lesion", "ham10000", "efficientnet", "churn prediction", "crop health",
+            "entity extraction", "text classification", "natural language", "hugging face", "pytorch",
+            "tensorflow", "scikit-learn"
+        ]
+        sde_strong = [
+            "full stack", "fullstack", "react", "react.js", "next.js", "backend", "frontend",
+            "rest api", "microservices", "web app", "django", "fastapi", "spring boot",
+            "rail navigation", "route optimization"
+        ]
+        consult_strong = [
+            "management consulting", "market entry", "due diligence", "profitability", "valuation",
+            "content strategy", "business intelligence analysis", "supply chain"
+        ]
+
+        if has_any(finance_strong):
+            scores["finance"] = scores.get("finance", 0) + 25
+        if has_any(core_strong):
+            scores["core"] = scores.get("core", 0) + 25
+        if has_any(data_strong):
+            scores["data"] = scores.get("data", 0) + 20
+        if has_any(sde_strong):
+            scores["sde"] = scores.get("sde", 0) + 20
+        if has_any(consult_strong):
+            scores["consult"] = scores.get("consult", 0) + 18
+
+        # Guardrail: If core physical hardware / mechanical keywords are present, suppress generic SDE matches (c++, python, linux, git)
+        if has_any(core_strong):
+            scores["sde"] = max(0, scores.get("sde", 0) - 8)
 
         best_domain = max(scores, key=scores.get)
         return best_domain if scores[best_domain] > 0 else "general"
@@ -368,9 +413,17 @@ class MasterCVParser:
         sections_map[current_sec] = []
 
         for l in lines:
-            clean = l.strip('#* ').upper()
-            if (clean in known_all_banners or any(clean == b for b in known_all_banners)) and '|' not in l and len(clean) < 45:
-                current_sec = clean
+            raw_stripped = l.strip('#* \t')
+            # A valid CDC section header must be uppercase, not a bullet, and in known_all_banners
+            is_header = (
+                raw_stripped.isupper()
+                and not l.startswith(('•', '-', '*', '+'))
+                and '|' not in l
+                and len(raw_stripped) < 45
+                and (raw_stripped in known_all_banners or any(raw_stripped == b for b in known_all_banners))
+            )
+            if is_header:
+                current_sec = raw_stripped
                 if current_sec not in sections_map:
                     sections_order.append(current_sec)
                     sections_map[current_sec] = []
@@ -383,11 +436,9 @@ class MasterCVParser:
     def format_static_section_lines(lines: List[str], sec_name: str, domain: str = "sde") -> List[str]:
         """
         Preserves 100% of the candidate's master CV static section lines in their exact text style:
-        - Never changes font style or forces bulleting on non-bulleted lines.
-        - If a line is bulleted in the master CV, keeps the bullet.
-        - If a line is plain text in the master CV, keeps it plain text.
-        - Merges category lines for SKILLS / COURSEWORK if wrapped, without removing any user categories.
-        - Strips out CDC footer noise (e.g. '!Self declared by the student...').
+        - Copies and pastes ALL entries and ALL bullets as they are from the Master CV with no exceptions.
+        - Merges wrapped continuation lines so that sentences don't break in half.
+        - Keeps all skills, certifications, coursework, positions of responsibility, and extracurriculars verbatim.
         """
         sec_up = sec_name.upper()
 
@@ -405,7 +456,6 @@ class MasterCVParser:
             curr_lbl = ""
             curr_val = ""
             for l in cleaned:
-                # Strip any accidental bullet prefix so skills and coursework are strictly NEVER bulleted
                 cl_clean = l.lstrip('•-* \t').strip()
                 if not cl_clean:
                     continue
@@ -423,32 +473,42 @@ class MasterCVParser:
                 merged.append(f"{curr_lbl} {curr_val}".strip())
             return merged
 
-        # For AWARDS, POSITIONS OF RESPONSIBILITY, CERTIFICATIONS, EXTRA CURRICULAR, etc.
-        out = []
-        extra_count = 0
-        award_count = 0
-        por_count = 0
+        # For AWARDS, POSITIONS OF RESPONSIBILITY, CERTIFICATIONS, EXTRA CURRICULAR ACTIVITIES:
+        # Merge continuation lines of bullets into cohesive single lines without dropping any items
+        merged_entries = []
+        curr_bullet = ""
+        is_curr_b = False
+
         for cl in cleaned:
             is_b = cl.startswith(('•', '-', '*'))
-            clean_text = cl.lstrip('•-* ').strip() if is_b else cl
+            text = cl.lstrip('•-* ').strip() if is_b else cl
 
-            if "EXTRA" in sec_up:
-                if extra_count < 5:
-                    out.append(f"• {clean_text}" if is_b else clean_text)
-                    extra_count += 1
-            elif "AWARD" in sec_up or "ACHIEVE" in sec_up:
-                if award_count < 4:
-                    out.append(f"• {clean_text}" if is_b else clean_text)
-                    award_count += 1
-            elif "POSITION" in sec_up or "LEADERSHIP" in sec_up:
-                if ("|" in cl or "[" in cl) and not is_b:
-                    if por_count < 2:
-                        out.append(cl)
-                        por_count += 1
-                    else:
-                        break
-                elif por_count <= 2:
-                    out.append(f"• {clean_text}" if is_b else clean_text)
+            # Check if this line looks like a new entry (bullet, pipe-separated title, or header)
+            is_new_entry = is_b or ("|" in cl and len(cl) < 110) or ("[" in cl and "]" in cl)
+
+            if is_new_entry:
+                if curr_bullet:
+                    merged_entries.append((is_curr_b, curr_bullet))
+                curr_bullet = text
+                is_curr_b = is_b
+            else:
+                if curr_bullet:
+                    # Append continuation text with a single space
+                    curr_bullet += " " + text
+                else:
+                    curr_bullet = text
+                    is_curr_b = is_b
+
+        if curr_bullet:
+            merged_entries.append((is_curr_b, curr_bullet))
+
+        out = []
+        for is_b, text in merged_entries:
+            clean_text = " ".join(text.split())
+            if not clean_text:
+                continue
+            if ("|" in clean_text or "[" in clean_text) and not is_b:
+                out.append(clean_text)
             else:
                 out.append(f"• {clean_text}" if is_b else clean_text)
 

@@ -24,6 +24,7 @@ import {
   Copy,
   BookmarkCheck,
   Heart,
+  Save,
 } from "lucide-react";
 import { api } from "../services/api";
 
@@ -38,6 +39,11 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
   const [editedAnswers, setEditedAnswers] = useState(application.answers || {});
   const [submitting, setSubmitting] = useState(false);
   const [copiedType, setCopiedType] = useState(null);
+
+  // Real-time draft save state
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [saveDraftMsg, setSaveDraftMsg] = useState(null);
+  const [pdfTimestamp, setPdfTimestamp] = useState(Date.now());
 
   // Missing info form state
   const [missingInput, setMissingInput] = useState("");
@@ -60,6 +66,28 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
   const [savingCV, setSavingCV] = useState(false);
   const [savedCVMsg, setSavedCVMsg] = useState(null);
 
+  const handleSaveDraftChanges = async () => {
+    setSavingDraft(true);
+    setSaveDraftMsg(null);
+    try {
+      await api.updateApplicationDraft(application.id, {
+        tailored_resume: editedResume,
+        cover_letter: editedCoverLetter,
+        answers: editedAnswers,
+      });
+      setPdfTimestamp(Date.now());
+      setSaveDraftMsg("Saved & recompiled PDF successfully!");
+      setTimeout(() => setSaveDraftMsg(null), 3500);
+      if (onProfileUpdated) {
+        onProfileUpdated();
+      }
+    } catch (err) {
+      alert(`Failed to save draft changes: ${err.message}`);
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
   const handleSaveCVToProfile = async () => {
     setSavingCV(true);
     try {
@@ -69,7 +97,7 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
         application_id: application.id,
         resume_text: isEditing ? editedResume : application.tailored_resume,
       });
-      setSavedCVMsg(`✓ Saved ${res.filename || tailoredCvFilename}!`);
+      setSavedCVMsg(`Saved ${res.filename || tailoredCvFilename}!`);
       setTimeout(() => setSavedCVMsg(null), 3500);
       if (onProfileUpdated) {
         onProfileUpdated();
@@ -491,7 +519,7 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
                   </button>
 
                   <a
-                    href={resumePdfUrl}
+                    href={`${resumePdfUrl}?t=${pdfTimestamp}`}
                     download={tailoredCvFilename}
                     className="btn btn-primary"
                     style={{ padding: "6px 14px", fontSize: "12px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
@@ -501,7 +529,7 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
                   </a>
 
                   <a
-                    href={resumePdfUrl}
+                    href={`${resumePdfUrl}?t=${pdfTimestamp}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn btn-secondary"
@@ -516,8 +544,27 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
 
               {isEditing ? (
                 <div>
-                  <div style={{ fontSize: "12px", color: "var(--accent-amber-text)", marginBottom: "8px" }}>
-                    Editing raw tailored resume text. Changes will be saved to your application draft upon approval.
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
+                    <div style={{ fontSize: "12px", color: "var(--accent-amber-text)" }}>
+                      Modify tailored CV text. Click 'Save & Re-generate PDF' to recompile immediately.
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      {saveDraftMsg && (
+                        <span style={{ fontSize: "12px", color: "var(--accent-emerald-text)", fontWeight: "700" }}>
+                          {saveDraftMsg}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={handleSaveDraftChanges}
+                        disabled={savingDraft}
+                        style={{ padding: "6px 14px", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                      >
+                        <Save size={13} />
+                        <span>{savingDraft ? "Saving & Recompiling..." : "Save & Re-generate PDF"}</span>
+                      </button>
+                    </div>
                   </div>
                   <textarea
                     className="textarea"
@@ -540,7 +587,7 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
                     }}
                   >
                     <iframe
-                      src={resumePdfUrl}
+                      src={`${resumePdfUrl}?t=${pdfTimestamp}`}
                       title="Tailored ATS PDF"
                       style={{
                         width: "100%",

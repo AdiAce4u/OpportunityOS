@@ -28,7 +28,7 @@ export function TopOpportunities({ jobs = [], onSelectJob, onOpenReview, onOpenC
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {displayJobs.length === 0 ? (
           <div style={{ color: "var(--text-muted)", padding: "20px", textAlign: "center" }}>
-            No opportunities shortlisted yet. Run the agent to discover and match roles.
+            No opportunities shortlisted yet. Upload your Master CV to automatically match roles.
           </div>
         ) : (
           displayJobs.map((item, idx) => {

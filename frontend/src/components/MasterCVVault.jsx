@@ -26,6 +26,7 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
   const [uploadStatus, setUploadStatus] = useState(null);
   const [activeTab, setActiveTab] = useState("projects"); // "projects" | "raw_cv" | "education"
   const [rescoring, setRescoring] = useState(false);
+  const [reclassifying, setReclassifying] = useState(false);
 
   const projects = profile?.categorized_projects || profile?.projects || [];
 
@@ -78,7 +79,7 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
       }
       setUploadStatus({
         type: "success",
-        text: `✓ Master CV parsed! ${res.total_projects || res.projects?.length || 0} projects extracted & categorized across domains.`,
+        text: `Master CV parsed! ${res.total_projects || res.projects?.length || 0} projects extracted & categorized across domains.`,
       });
     } catch (err) {
       setUploadStatus({ type: "error", text: `Upload error: ${err.message}` });
@@ -93,12 +94,31 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
       const res = await api.rescoreJobs(profile?.id);
       setUploadStatus({
         type: "success",
-        text: `✓ Rescored ${res.rescored_jobs_count} opportunities against your active Master CV!`,
+        text: `Rescored ${res.rescored_jobs_count} opportunities against your active Master CV!`,
       });
     } catch (e) {
       alert(`Rescore error: ${e.message}`);
     } finally {
       setRescoring(false);
+    }
+  };
+
+  const handleReclassify = async () => {
+    setReclassifying(true);
+    setUploadStatus({ type: "info", text: "Accurately categorizing projects across profiles with Gemini AI..." });
+    try {
+      const res = await api.reclassifyProjects(profile?.id);
+      if (res.profile) {
+        onProfileUpdated(res.profile);
+      }
+      setUploadStatus({
+        type: "success",
+        text: `AI Segregation Complete! ${res.total_projects} projects accurately classified across domains.`,
+      });
+    } catch (err) {
+      setUploadStatus({ type: "error", text: `Re-classification notice: ${err.message}` });
+    } finally {
+      setReclassifying(false);
     }
   };
 
@@ -145,7 +165,7 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
             </span>
           </div>
           <h2 style={{ fontSize: "22px", fontWeight: "800", color: "var(--text-primary)" }}>
-            {profile?.name || "Candidate"}’s Comprehensive Multi-Domain Portfolio
+            {profile?.name ? `${profile.name}’s Multi-Domain Portfolio` : "Candidate Master CV & Domain Vault"}
           </h2>
         </div>
 
@@ -153,7 +173,7 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
           <button
             className="btn btn-secondary"
             onClick={handleRescoreAll}
-            disabled={rescoring}
+            disabled={rescoring || projects.length === 0}
             style={{ fontSize: "12px" }}
           >
             <RefreshCw size={14} className={rescoring ? "spin" : ""} />
@@ -226,7 +246,7 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
             <div style={{ background: "var(--bg-card-subtle)", padding: "12px 14px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
               <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Institution & Degree</div>
               <div style={{ fontSize: "12.5px", fontWeight: "700", color: "var(--text-primary)", marginTop: "4px" }}>
-                {profile?.college || "IIT Kharagpur"}
+                {profile?.college ? `${profile.college}${profile.degree ? ` • ${profile.degree}` : ""}` : "Not uploaded yet"}
               </div>
             </div>
             <div style={{ background: "var(--bg-card-subtle)", padding: "12px 14px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
@@ -238,7 +258,7 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
             <div style={{ background: "var(--bg-card-subtle)", padding: "12px 14px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
               <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>CGPA / Graduation</div>
               <div style={{ fontSize: "12.5px", fontWeight: "700", color: "var(--accent-emerald-text)", marginTop: "4px" }}>
-                {profile?.cgpa || 8.39} / 10 ({profile?.graduation_year || 2028})
+                {profile?.cgpa ? `${profile.cgpa} / 10` : "—"}{profile?.graduation_year ? ` (${profile.graduation_year})` : ""}
               </div>
             </div>
           </div>
@@ -266,13 +286,26 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
 
       {/* Domain Category Filter Tabs */}
       <div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-          <h3 style={{ fontSize: "16px", fontWeight: "800", color: "var(--text-primary)" }}>
-            Categorized Project Catalog ({filteredProjects.length})
-          </h3>
-          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-            Click any domain to inspect segregated projects
-          </span>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "10px" }}>
+          <div>
+            <h3 style={{ fontSize: "16px", fontWeight: "800", color: "var(--text-primary)" }}>
+              Categorized Project Catalog ({filteredProjects.length})
+            </h3>
+            <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+              Click any domain tab to inspect segregated projects
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleReclassify}
+            disabled={reclassifying || projects.length === 0}
+            style={{ fontSize: "12px", padding: "6px 12px" }}
+          >
+            <Sparkles size={13} className={reclassifying ? "spin" : ""} color="var(--primary)" />
+            <span>{reclassifying ? "Classifying with Gemini..." : "Re-classify with AI"}</span>
+          </button>
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "20px" }}>
@@ -319,90 +352,115 @@ export function MasterCVVault({ profile, onProfileUpdated, onNavigateToSearch })
         </div>
 
         {/* Project Cards Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "16px" }}>
-          {filteredProjects.map((p, idx) => {
-            const domainKey = (p.domain || "general").toLowerCase();
-            const colors = domainColors[domainKey] || domainColors.general;
+        {filteredProjects.length === 0 ? (
+          <div
+            className="card"
+            style={{
+              padding: "48px 24px",
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "12px",
+              color: "var(--text-muted)",
+              background: "var(--bg-card-subtle)",
+              borderRadius: "12px",
+            }}
+          >
+            <FolderGit2 size={36} color="var(--primary)" style={{ opacity: 0.6 }} />
+            <h4 style={{ fontSize: "16px", fontWeight: "700", color: "var(--text-primary)" }}>
+              No Projects Cataloged Yet
+            </h4>
+            <p style={{ fontSize: "13px", maxWidth: "520px", lineHeight: "1.5" }}>
+              Upload your Master CV (.md, .txt, .pdf) in the section above. OpportunityOS will extract your projects, classify them across domains (SDE, Data, Core, Product, Consult, Finance), and index all skills and achievements.
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "16px" }}>
+            {filteredProjects.map((p, idx) => {
+              const domainKey = (p.domain || "general").toLowerCase();
+              const colors = domainColors[domainKey] || domainColors.general;
 
-            return (
-              <div
-                key={idx}
-                className="card"
-                style={{
-                  padding: "20px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  transition: "all 0.15s ease",
-                }}
-              >
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px", gap: "8px" }}>
-                    <h4 style={{ fontSize: "14.5px", fontWeight: "700", color: "var(--text-primary)", lineHeight: "1.4" }}>
-                      {p.name}
-                    </h4>
-                    <span
-                      style={{
-                        background: colors.bg,
-                        color: colors.text,
-                        border: `1px solid ${colors.border}`,
-                        padding: "2px 8px",
-                        borderRadius: "6px",
-                        fontSize: "10.5px",
-                        fontWeight: "800",
-                        textTransform: "uppercase",
-                        whiteSpace: "nowrap",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "4px",
-                      }}
-                    >
-                      {domainIcons[domainKey]}
-                      {p.domain || "General"}
-                    </span>
-                  </div>
-
-                  <p style={{ fontSize: "12.5px", color: "var(--text-secondary)", lineHeight: "1.5", marginBottom: "12px" }}>
-                    {p.description || (p.bullets && p.bullets[0]) || "Multi-disciplinary engineering project."}
-                  </p>
-
-                  {/* Bullets */}
-                  {p.bullets && p.bullets.length > 1 && (
-                    <div style={{ borderLeft: "2px solid var(--border-active)", paddingLeft: "10px", marginBottom: "12px", display: "flex", flexDirection: "column", gap: "4px" }}>
-                      {p.bullets.slice(0, 2).map((b, bIdx) => (
-                        <div key={bIdx} style={{ fontSize: "11.5px", color: "var(--text-secondary)", lineHeight: "1.4" }}>
-                          • {b}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  {/* Tech Stack Tags */}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "8px" }}>
-                    {(p.tech_stack || []).map((t, tIdx) => (
+              return (
+                <div
+                  key={idx}
+                  className="card"
+                  style={{
+                    padding: "20px",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px", gap: "8px" }}>
+                      <h4 style={{ fontSize: "14.5px", fontWeight: "700", color: "var(--text-primary)", lineHeight: "1.4" }}>
+                        {p.name}
+                      </h4>
                       <span
-                        key={tIdx}
                         style={{
-                          background: "var(--bg-card-subtle)",
-                          color: "var(--text-secondary)",
-                          border: "1px solid var(--border-subtle)",
-                          padding: "2px 6px",
-                          borderRadius: "4px",
+                          background: colors.bg,
+                          color: colors.text,
+                          border: `1px solid ${colors.border}`,
+                          padding: "2px 8px",
+                          borderRadius: "6px",
                           fontSize: "10.5px",
-                          fontWeight: "600",
+                          fontWeight: "800",
+                          textTransform: "uppercase",
+                          whiteSpace: "nowrap",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
                         }}
                       >
-                        {t}
+                        {domainIcons[domainKey]}
+                        {p.domain || "General"}
                       </span>
-                    ))}
+                    </div>
+
+                    <p style={{ fontSize: "12.5px", color: "var(--text-secondary)", lineHeight: "1.5", marginBottom: "12px" }}>
+                      {p.description || (p.bullets && p.bullets[0]) || "Multi-disciplinary engineering project."}
+                    </p>
+
+                    {/* Bullets */}
+                    {p.bullets && p.bullets.length > 1 && (
+                      <div style={{ borderLeft: "2px solid var(--border-active)", paddingLeft: "10px", marginBottom: "12px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                        {p.bullets.slice(0, 2).map((b, bIdx) => (
+                          <div key={bIdx} style={{ fontSize: "11.5px", color: "var(--text-secondary)", lineHeight: "1.4" }}>
+                            • {b}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    {/* Tech Stack Tags */}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginTop: "8px" }}>
+                      {(p.tech_stack || []).map((t, tIdx) => (
+                        <span
+                          key={tIdx}
+                          style={{
+                            background: "var(--bg-card-subtle)",
+                            color: "var(--text-secondary)",
+                            border: "1px solid var(--border-subtle)",
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                            fontSize: "10.5px",
+                            fontWeight: "600",
+                          }}
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

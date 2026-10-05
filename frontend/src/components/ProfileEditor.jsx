@@ -24,31 +24,25 @@ import { api } from "../services/api";
 
 export function ProfileEditor({ profile, onSaveProfile }) {
   const [formData, setFormData] = useState(profile || {
-    name: "Aarav Sharma",
-    email: "aarav.sharma@example.com",
-    phone: "+91 9876543210",
-    graduation_year: 2027,
-    degree: "B.Tech in Computer Science & Robotics",
-    college: "IIT Kharagpur",
-    cgpa: 8.92,
-    skills: ["Python", "C++", "ROS2", "Machine Learning", "Robotics", "Controls", "Linux", "PyTorch"],
-    projects: [
-      {
-        name: "Quadruped Robot Dynamic Locomotion",
-        description: "12-DOF quadruped robot simulation with ROS2 and Gazebo.",
-        tech_stack: ["ROS2", "C++", "Python", "Gazebo"],
-      },
-    ],
-    preferred_roles: ["Robotics Intern", "Robotics Software Intern", "ML Intern"],
-    preferred_locations: ["India", "Bangalore", "Hyderabad", "Remote"],
-    minimum_salary: 40000,
-    work_authorization: "Citizen of India, fully authorized to work in India",
-    prefer_companies: ["XYZ Robotics", "ABC AI", "DEF Autonomy"],
+    name: "",
+    email: "",
+    phone: "",
+    graduation_year: "",
+    degree: "",
+    college: "",
+    cgpa: "",
+    skills: [],
+    projects: [],
+    preferred_roles: [],
+    preferred_locations: [],
+    minimum_salary: "",
+    work_authorization: "",
+    prefer_companies: [],
     avoid_companies: [],
     resume_text: "",
     master_cv_markdown: "",
-    resume_filename: "mastercv.pdf",
-    master_cv_pdf_path: "uploads/mastercv.pdf",
+    resume_filename: "",
+    master_cv_pdf_path: "",
     saved_tailored_cvs: [],
   });
 
@@ -57,11 +51,24 @@ export function ProfileEditor({ profile, onSaveProfile }) {
       setFormData((prev) => ({
         ...prev,
         ...profile,
-        resume_text: profile.resume_text || profile.master_cv_markdown || prev.resume_text || "",
-        master_cv_markdown: profile.master_cv_markdown || profile.resume_text || prev.master_cv_markdown || "",
-        resume_filename: profile.resume_filename || prev.resume_filename || "mastercv.pdf",
-        master_cv_pdf_path: profile.master_cv_pdf_path || prev.master_cv_pdf_path || "uploads/mastercv.pdf",
-        saved_tailored_cvs: profile.saved_tailored_cvs || prev.saved_tailored_cvs || [],
+        name: profile.name || "",
+        email: profile.email || "",
+        phone: profile.phone || "",
+        graduation_year: profile.graduation_year ?? "",
+        degree: profile.degree || "",
+        college: profile.college || "",
+        cgpa: profile.cgpa ?? "",
+        skills: profile.skills || [],
+        projects: profile.projects || [],
+        preferred_roles: profile.preferred_roles || [],
+        preferred_locations: profile.preferred_locations || [],
+        minimum_salary: profile.minimum_salary ?? "",
+        work_authorization: profile.work_authorization || "",
+        resume_text: profile.resume_text || profile.master_cv_markdown || "",
+        master_cv_markdown: profile.master_cv_markdown || profile.resume_text || "",
+        resume_filename: profile.resume_filename || "",
+        master_cv_pdf_path: profile.master_cv_pdf_path || "",
+        saved_tailored_cvs: profile.saved_tailored_cvs || [],
       }));
     }
   }, [profile]);
@@ -140,7 +147,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
         }
       }
       setSelectedCvKey("master");
-      setUploadMsg(`✓ Successfully uploaded ${file.name}! Master CV PDF is ready.`);
+      setUploadMsg(`Successfully uploaded ${file.name}! Master CV PDF is ready.`);
     } catch (err) {
       setUploadMsg(`Upload failed: ${err.message}`);
     } finally {
@@ -247,7 +254,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
             <span
               style={{
                 fontSize: "12px",
-                color: uploadMsg.includes("✓") ? "var(--accent-emerald-text)" : "var(--accent-amber-text)",
+                color: uploadMsg.includes("Successfully") ? "var(--accent-emerald-text)" : "var(--accent-amber-text)",
                 fontWeight: "600",
               }}
             >
@@ -510,7 +517,31 @@ export function ProfileEditor({ profile, onSaveProfile }) {
 
         {/* Viewer Content Area */}
         <div style={{ padding: "16px 18px", background: "var(--bg-well)" }}>
-          {viewFormat === "pdf" ? (
+          {(!formData.master_cv_markdown && !formData.resume_text && !isTailored) ? (
+            <div
+              style={{
+                width: "100%",
+                padding: "60px 24px",
+                borderRadius: "8px",
+                border: "1px dashed var(--border-subtle)",
+                textAlign: "center",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "10px",
+                color: "var(--text-muted)",
+                background: "var(--bg-card-subtle)",
+              }}
+            >
+              <FileText size={36} color="var(--primary)" style={{ opacity: 0.6 }} />
+              <h4 style={{ fontSize: "15px", fontWeight: "700", color: "var(--text-primary)" }}>
+                No Master CV Uploaded Yet
+              </h4>
+              <p style={{ fontSize: "12.5px", maxWidth: "480px", lineHeight: "1.5" }}>
+                Use the upload bar above to upload your Master CV (.md, .txt, .pdf). OpportunityOS will extract your verified candidate facts and generate your live PDF preview.
+              </p>
+            </div>
+          ) : viewFormat === "pdf" ? (
             <div
               style={{
                 width: "100%",
@@ -609,6 +640,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
             <input
               type="text"
               className="input"
+              placeholder="e.g. Candidate Name"
               value={formData.name || ""}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
@@ -621,6 +653,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
             <input
               type="email"
               className="input"
+              placeholder="e.g. candidate@example.com"
               value={formData.email || ""}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             />
@@ -633,6 +666,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
             <input
               type="text"
               className="input"
+              placeholder="e.g. +91 9876543210"
               value={formData.phone || ""}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             />
@@ -645,8 +679,9 @@ export function ProfileEditor({ profile, onSaveProfile }) {
             <input
               type="number"
               className="input"
-              value={formData.graduation_year || 2027}
-              onChange={(e) => setFormData({ ...formData, graduation_year: parseInt(e.target.value) })}
+              placeholder="e.g. 2027"
+              value={formData.graduation_year ?? ""}
+              onChange={(e) => setFormData({ ...formData, graduation_year: e.target.value ? parseInt(e.target.value) : "" })}
             />
           </div>
 
@@ -657,6 +692,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
             <input
               type="text"
               className="input"
+              placeholder="e.g. B.Tech in Computer Science"
               value={formData.degree || ""}
               onChange={(e) => setFormData({ ...formData, degree: e.target.value })}
             />
@@ -669,6 +705,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
             <input
               type="text"
               className="input"
+              placeholder="e.g. College / University Name"
               value={formData.college || ""}
               onChange={(e) => setFormData({ ...formData, college: e.target.value })}
             />
@@ -682,8 +719,9 @@ export function ProfileEditor({ profile, onSaveProfile }) {
               type="number"
               step="0.01"
               className="input"
-              value={formData.cgpa || 8.9}
-              onChange={(e) => setFormData({ ...formData, cgpa: parseFloat(e.target.value) })}
+              placeholder="e.g. 8.5"
+              value={formData.cgpa ?? ""}
+              onChange={(e) => setFormData({ ...formData, cgpa: e.target.value ? parseFloat(e.target.value) : "" })}
             />
           </div>
 
@@ -694,8 +732,9 @@ export function ProfileEditor({ profile, onSaveProfile }) {
             <input
               type="number"
               className="input"
-              value={formData.minimum_salary || 40000}
-              onChange={(e) => setFormData({ ...formData, minimum_salary: parseFloat(e.target.value) })}
+              placeholder="e.g. 40000"
+              value={formData.minimum_salary ?? ""}
+              onChange={(e) => setFormData({ ...formData, minimum_salary: e.target.value ? parseFloat(e.target.value) : "" })}
             />
           </div>
         </div>
@@ -708,7 +747,8 @@ export function ProfileEditor({ profile, onSaveProfile }) {
           <input
             type="text"
             className="input"
-            value={formData.work_authorization || "Eligible to work in India"}
+            placeholder="e.g. Eligible to work in India"
+            value={formData.work_authorization || ""}
             onChange={(e) => setFormData({ ...formData, work_authorization: e.target.value })}
           />
         </div>

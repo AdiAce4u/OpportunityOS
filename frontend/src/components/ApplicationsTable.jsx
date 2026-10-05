@@ -46,7 +46,7 @@ export function ApplicationsTable({ applications = [], onOpenApplication, onTogg
         return <span className="badge badge-warning">Awaiting Approval</span>;
       case "SUBMITTED":
       case "APPLIED":
-        return <span className="badge badge-success">✓ Applied</span>;
+        return <span className="badge badge-success">Applied</span>;
       case "INTERVIEW":
         return <span className="badge badge-primary">Interview Scheduled</span>;
       case "REJECTED_BY_USER":
@@ -324,7 +324,7 @@ export function ApplicationsTable({ applications = [], onOpenApplication, onTogg
                           : "No opportunities tracked yet."}
                       </div>
                       <div style={{ fontSize: "12.5px" }}>
-                        Click the ❤️ heart icon on any job in Top Opportunities or Job Discovery Engine to add it here.
+                        Click the heart icon on any job in Top Opportunities or Job Discovery Engine to add it here.
                       </div>
                     </div>
                   </td>

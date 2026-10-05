@@ -309,73 +309,66 @@ def sync_agent_db_jobs(db, projects):
             db.add(job)
     db.commit()
 
+    # Seed rich Wellfound startup openings across all 5 tracks
+    wellfound_startups = [
+        ("software", "Cursor (Anysphere)", "Full Stack / AI Infrastructure Engineer", "₹32.0 - 45.0 LPA", "Remote", "https://wellfound.com/jobs?role=software"),
+        ("software", "Together AI", "Backend & Cloud Systems Engineer", "₹30.0 - 42.0 LPA", "Remote", "https://wellfound.com/jobs?role=software"),
+        ("software", "Supabase", "Distributed Systems / Postgres Engineer", "₹28.0 - 38.0 LPA", "Remote", "https://wellfound.com/jobs?role=software"),
+        ("software", "LangChain", "Software Engineer - Developer Frameworks & APIs", "₹26.0 - 35.0 LPA", "Remote", "https://wellfound.com/jobs?role=software"),
+        ("software", "Postman", "Founding Platform Engineer (APIs & Systems)", "₹22.0 - 30.0 LPA", "Bangalore", "https://wellfound.com/jobs?role=software"),
+        ("software", "Vercel", "Frontend & Full Stack Systems Engineer", "₹28.0 - 36.0 LPA", "Remote", "https://wellfound.com/jobs?role=software"),
+        ("data", "Perplexity AI", "AI / Retrieval & Search Systems Engineer", "₹35.0 - 50.0 LPA", "Remote", "https://wellfound.com/jobs?role=data"),
+        ("data", "Mistral AI", "Machine Learning & Model Optimization Engineer", "₹38.0 - 55.0 LPA", "Remote", "https://wellfound.com/jobs?role=data"),
+        ("data", "Glean", "Machine Learning Engineer - Enterprise Knowledge Graph", "₹30.0 - 45.0 LPA", "Bangalore", "https://wellfound.com/jobs?role=data"),
+        ("data", "Pinecone", "Vector Database & Indexing Systems Engineer", "₹28.0 - 40.0 LPA", "Remote", "https://wellfound.com/jobs?role=data"),
+        ("data", "Scale AI", "Data & Computer Vision Research Engineer", "₹26.0 - 38.0 LPA", "Remote", "https://wellfound.com/jobs?role=data"),
+        ("data", "Weights & Biases", "MLOps & Deep Learning Infrastructure Engineer", "₹25.0 - 35.0 LPA", "Remote", "https://wellfound.com/jobs?role=data"),
+        ("data", "Arize AI", "Machine Learning Observability & Evaluation Intern", "₹65,000/month", "Remote", "https://wellfound.com/jobs?role=data"),
+        ("core", "Figure AI", "Humanoid Robotics Software Engineer (Controls & ROS2)", "₹35.0 - 50.0 LPA", "Remote", "https://wellfound.com/jobs?role=robotics"),
+        ("core", "Skydio", "Autonomous Drone Navigation & SLAM Engineer", "₹28.0 - 42.0 LPA", "Remote", "https://wellfound.com/jobs?role=robotics"),
+        ("core", "Covariant", "Robotics Perception & Manipulation Engineer", "₹30.0 - 44.0 LPA", "Remote", "https://wellfound.com/jobs?role=robotics"),
+        ("core", "Monarch Tractor", "Autonomous Vehicle & Embedded Systems Engineer", "₹24.0 - 34.0 LPA", "Bangalore", "https://wellfound.com/jobs?role=robotics"),
+        ("core", "Dexterity", "Robotics Motion Planning & Firmware Engineer", "₹26.0 - 36.0 LPA", "Remote", "https://wellfound.com/jobs?role=robotics"),
+        ("finance", "Wintermute", "Quantitative Trader & Algorithmic Researcher", "₹40.0 - 65.0 LPA", "Remote", "https://wellfound.com/jobs?role=finance"),
+        ("finance", "FalconX", "Crypto Quant Researcher & Liquidity Engineer", "₹35.0 - 55.0 LPA", "Bangalore", "https://wellfound.com/jobs?role=finance"),
+        ("finance", "Ramp", "Fintech Backend & Risk Intelligence Engineer", "₹32.0 - 46.0 LPA", "Remote", "https://wellfound.com/jobs?role=finance"),
+        ("finance", "Plaid", "Financial Data Infrastructure Engineer", "₹30.0 - 44.0 LPA", "Remote", "https://wellfound.com/jobs?role=finance"),
+        ("finance", "Brex", "Fintech Risk Analytics & Quantitative Engineer", "₹28.0 - 40.0 LPA", "Remote", "https://wellfound.com/jobs?role=finance"),
+        ("consult", "Antler India", "Venture Partner & Startup Strategy Analyst", "₹18.0 - 25.0 LPA", "Bangalore", "https://wellfound.com/jobs?role=consulting"),
+        ("consult", "Entrepreneur First", "Founders Associate - Strategy & Operations", "₹16.0 - 24.0 LPA", "Bangalore", "https://wellfound.com/jobs?role=consulting"),
+        ("consult", "Carta", "Corporate Strategy & Private Market Valuation Analyst", "₹20.0 - 28.0 LPA", "Bangalore", "https://wellfound.com/jobs?role=consulting"),
+        ("consult", "Techstars", "Startup Acceleration & Strategy Associate", "₹15.0 - 22.0 LPA", "Remote", "https://wellfound.com/jobs?role=consulting"),
+    ]
+    for cat, comp, title, sal, loc, url in wellfound_startups:
+        ext_id = f"wf-{uuid.uuid5(uuid.NAMESPACE_DNS, title + comp).hex[:10]}"
+        existing = db.query(Job).filter((Job.external_id == ext_id) | ((Job.title == title) & (Job.company == comp))).first()
+        if not existing:
+            match_info = matcher.match_job_description(title, f"{title} at {comp}. Cutting-edge startup technology.")
+            job = Job(
+                external_id=ext_id,
+                title=title,
+                company=comp,
+                location=loc,
+                is_remote="remote" in loc.lower(),
+                category=cat,
+                search_term=title,
+                site="wellfound",
+                match_score=match_info.get("match_score", 86.0),
+                best_matching_project=match_info.get("best_project", "Featured Project"),
+                best_project_domain=cat,
+                matched_keywords=match_info.get("matched_keywords", ["Python", "Systems"]),
+                salary_text=sal,
+                display_salary=sal,
+                description=f"Frontier startup opening for {title} at {comp} on Wellfound. Equity, high ownership, and rapid engineering iteration.",
+                required_skills=match_info.get("matched_keywords", ["System Design", "Problem Solving"]),
+                url=url,
+                source="portal_wellfound"
+            )
+            db.add(job)
+    db.commit()
+
 def seed_database(db):
-    """Initializes OpportunityOS database with Master CV projects, 5 tracks of jobs, and sample application."""
-    profile = db.query(UserProfile).first()
-    
-    master_cv_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "job-search-agent", "uploaded_master_cv.md")
-    master_text = ""
-    if os.path.exists(master_cv_path):
-        with open(master_cv_path, "r", encoding="utf-8", errors="ignore") as f:
-            master_text = f.read()
-
-    parsed_cv = MasterCVParser.parse_full_master_cv(master_text) if master_text else None
-
-    if not profile:
-        profile = UserProfile(
-            name=parsed_cv.get("name") if parsed_cv else "Vaibhav Anand",
-            email=parsed_cv.get("email") if parsed_cv else "vaibhav.anand@example.com",
-            phone=parsed_cv.get("phone") if parsed_cv else "+91 9876543210",
-            graduation_year=parsed_cv.get("graduation_year") if parsed_cv else 2028,
-            degree=parsed_cv.get("degree") if parsed_cv else "B.Tech in Mechanical Engineering",
-            college=parsed_cv.get("college") if parsed_cv else "IIT Kharagpur",
-            cgpa=parsed_cv.get("cgpa") if parsed_cv else 8.39,
-            skills=list(dict.fromkeys((parsed_cv.get("skills") or []) + [
-                "Python", "C++", "PyTorch", "ROS2", "Machine Learning", "FastAPI",
-                "Deep Learning", "Docker", "Node.js", "SolidWorks", "Computer Vision"
-            ])) if parsed_cv else [
-                "Python", "C++", "PyTorch", "ROS2", "Machine Learning", "FastAPI",
-                "Deep Learning", "Docker", "Node.js", "SolidWorks", "Computer Vision"
-            ],
-            projects=parsed_cv.get("projects") if parsed_cv else [],
-            categorized_projects=parsed_cv.get("projects") if parsed_cv else [],
-            experience=parsed_cv.get("experience") if parsed_cv else [
-                {
-                    "role": "Research Intern",
-                    "company": "Carnegie Mellon University",
-                    "duration": "Nov 2025 - Mar 2026",
-                    "description": "Developed gradient-derived LLM watermarking and antidistillation framework."
-                }
-            ],
-            preferred_roles=[
-                "Robotics Software Engineer",
-                "Machine Learning Engineer",
-                "Software Development Engineer",
-                "Data Scientist",
-                "Quantitative Analyst",
-                "Management Consultant"
-            ],
-            preferred_locations=["India", "Bangalore", "Hyderabad", "Remote", "Gurugram", "Mumbai"],
-            remote_preference=True,
-            minimum_salary=40000.0,
-            work_authorization="Eligible to work in India",
-            prefer_companies=["XYZ Robotics", "NeuralDrive Labs", "ABC AI", "NVIDIA", "Uber"],
-            avoid_companies=[],
-            resume_filename="Master_CV.md",
-            master_cv_markdown=master_text or "Master CV loaded."
-        )
-        db.add(profile)
-        db.commit()
-        db.refresh(profile)
-    elif parsed_cv:
-        profile.projects = parsed_cv.get("projects", [])
-        profile.categorized_projects = parsed_cv.get("projects", [])
-        profile.skills = list(dict.fromkeys((profile.skills or []) + (parsed_cv.get("skills") or []) + [
-            "ROS2", "C++", "Python", "PyTorch", "Machine Learning"
-        ]))
-        profile.master_cv_markdown = master_text
-        db.commit()
-
+    """Initializes OpportunityOS database with benchmark and portal opportunities (Profile and Applications remain blank until user uploads Master CV)."""
     # Seed benchmark opportunities
     for job_data in SAMPLE_JOBS:
         existing = db.query(Job).filter(Job.external_id == job_data["external_id"]).first()
@@ -385,72 +378,5 @@ def seed_database(db):
     db.commit()
 
     # Sync all jobs from job-search-agent/jobs_database.db
-    sync_agent_db_jobs(db, profile.categorized_projects or profile.projects or [])
+    sync_agent_db_jobs(db, [])
 
-    # Seed an application ready for review if none exist
-    if db.query(Application).count() == 0:
-        first_job = db.query(Job).filter(Job.external_id == "xyz-robotics-001").first() or db.query(Job).first()
-        if first_job and profile:
-            from app.tools.resume_tailor_engine import ResumeTailorEngine
-            job_dict = {
-                "id": first_job.id,
-                "title": first_job.title,
-                "company": first_job.company,
-                "location": first_job.location,
-                "description": first_job.description,
-                "required_skills": first_job.required_skills or ["Python", "C++", "FastAPI"],
-                "preferred_skills": first_job.preferred_skills or []
-            }
-            prof_dict = {
-                "name": profile.name,
-                "email": profile.email,
-                "phone": profile.phone,
-                "college": profile.college,
-                "degree": profile.degree,
-                "graduation_year": profile.graduation_year,
-                "cgpa": profile.cgpa,
-                "skills": profile.skills,
-                "projects": profile.categorized_projects or profile.projects,
-                "experience": profile.experience
-            }
-            tailored_txt = ResumeTailorEngine.tailor_cv(job_dict, prof_dict)
-            os.makedirs("uploads", exist_ok=True)
-            pdf_path = os.path.join("uploads", f"Tailored_CV_{first_job.company.replace(' ', '_')}_{first_job.id}.pdf")
-            ResumeTailorEngine.generate_pdf(tailored_txt, pdf_path)
-            
-            app = Application(
-                profile_id=profile.id,
-                job_id=first_job.id,
-                status="AWAITING_APPROVAL",
-                match_score=94.5,
-                match_breakdown={"skills": 95, "education": 100, "experience": 90, "location": 90, "projects": 95},
-                match_reason=f"Direct alignment with {first_job.best_matching_project or 'candidate portfolio'}.",
-                why_this_job={"required_present": first_job.required_skills, "best_project": first_job.best_matching_project},
-                tailored_resume=tailored_txt,
-                tailored_resume_pdf_path=pdf_path,
-                cover_letter=ResumeTailorEngine.generate_cover_letter(job_dict, prof_dict, first_job.best_matching_project),
-                answers=ResumeTailorEngine.generate_application_answers(job_dict, prof_dict, first_job.best_matching_project),
-                missing_information=[]
-            )
-            db.add(app)
-            db.commit()
-
-            # Seed an interview follow-up event
-            if db.query(FollowUpEvent).count() == 0:
-                follow_up = FollowUpEvent(
-                    application_id=app.id,
-                    event_type="INTERVIEW_INVITATION",
-                    scheduled_for=datetime.utcnow() + timedelta(days=3),
-                    status="PENDING",
-                    subject=f"Interview Invitation: {first_job.title} at {first_job.company}",
-                    content=f"{first_job.company} would like to invite you for a 45-minute Technical Discussion on ROS2 architecture and path planning.",
-                    interview_details={
-                        "date": (datetime.utcnow() + timedelta(days=3)).strftime("%B %d, %Y at 3:00 PM IST"),
-                        "round": "Technical Round 1 (Autonomy & System Architecture)",
-                        "interviewers": "Lead Autonomy Engineer",
-                        "meeting_link": "https://meet.google.com/xyz-robt-demo"
-                    },
-                    prep_notes="Review Cartographer SLAM parameter tuning, Nav2 BT navigator concepts, and C++ memory management (smart pointers)."
-                )
-                db.add(follow_up)
-                db.commit()

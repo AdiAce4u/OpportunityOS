@@ -42,6 +42,7 @@ function OpportunityOSApp() {
   const [isCustomJDOpen, setIsCustomJDOpen] = useState(false);
   const [activeGoal, setActiveGoal] = useState("Robotics or AI Internships in India (≥₹40,000/mo)");
   const [toastMessage, setToastMessage] = useState("");
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -80,7 +81,7 @@ function OpportunityOSApp() {
       {
         timestamp: new Date().toLocaleTimeString(),
         stage: "Supervisor",
-        message: "🧠 Supervisor Agent awakened. Evaluating multi-domain master CV & executing targeted portal searches...",
+        message: "Supervisor Agent awakened. Evaluating multi-domain master CV & executing targeted portal searches...",
         level: "INFO",
       },
     ]);
@@ -116,7 +117,7 @@ function OpportunityOSApp() {
       if (res.application_id) {
         const appDetails = await api.getApplication(res.application_id);
         setSelectedApp(appDetails);
-        showToast("🎯 1-Page ATS CV & Application Package Ready! Awaiting your Human Approval.");
+        showToast("1-Page ATS CV & Application Package Ready! Awaiting your Human Approval.");
       }
     } catch (err) {
       console.error("Agent run error:", err);
@@ -233,7 +234,7 @@ function OpportunityOSApp() {
         const appDetails = await api.getApplication(res.application_id);
         setSelectedApp(appDetails);
         await loadData();
-        showToast(`✓ ATS CV Ready for ${job.company}! Review and grant permission to apply.`);
+        showToast(`ATS CV Ready for ${job.company}! Review and grant permission to apply.`);
       }
     } catch (err) {
       alert(`Tailoring error: ${err.message}`);
@@ -245,7 +246,7 @@ function OpportunityOSApp() {
       const res = await api.approveApplication(appId, approvalPayload);
       setSelectedApp(null);
       await loadData();
-      showToast(`✓ Application approved & submitted! Reference: ${res.external_application_id || "APP-PORTAL-SUBMITTED"}`);
+      showToast(`Application approved & submitted! Reference: ${res.external_application_id || "APP-PORTAL-SUBMITTED"}`);
     } catch (err) {
       alert(`Approval error: ${err.message}`);
     }
@@ -322,6 +323,8 @@ function OpportunityOSApp() {
         setTab={setTab}
         awaitingCount={awaitingCount}
         projectsCount={projectsCount}
+        collapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
       />
 
       {/* Main Content */}
@@ -337,6 +340,8 @@ function OpportunityOSApp() {
             setActiveGoal(newGoal);
             showToast(`Autonomous target goal updated: "${newGoal}"`);
           }}
+          isSidebarCollapsed={isSidebarCollapsed}
+          onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
         />
 
         <div className="page-body">
@@ -355,7 +360,7 @@ function OpportunityOSApp() {
                   </h1>
                 </div>
 
-                <div style={{ display: "flex", gap: "10px" }}>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                   <button
                     className="btn btn-secondary"
                     onClick={() => setTab("master_cv")}
@@ -382,7 +387,13 @@ function OpportunityOSApp() {
               {/* Top Opportunities Ranked by Fit */}
               <div style={{ marginTop: "24px" }}>
                 <TopOpportunities
-                  jobs={applications.length > 0 ? applications : jobs}
+                  jobs={
+                    applications.length > 0
+                      ? applications
+                      : (profile?.master_cv_markdown || (profile?.projects && profile.projects.length > 0) || profile?.resume_text)
+                      ? jobs
+                      : []
+                  }
                   maxItems={6}
                   onOpenCustomJD={() => setIsCustomJDOpen(true)}
                   onSelectJob={(job) => handleTailorJobFromAnywhere(job)}

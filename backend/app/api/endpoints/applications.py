@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app.db.session import get_db
@@ -180,8 +180,8 @@ def tailor_for_job(
         raise HTTPException(404, "Job not found")
 
     profile = db.get(UserProfile, profile_id) if profile_id else db.query(UserProfile).first()
-    if not profile:
-        raise HTTPException(404, "Candidate profile not found")
+    if not profile or (not profile.master_cv_markdown and not profile.projects and not profile.resume_text):
+        raise HTTPException(400, "Please upload your Master CV first before generating a tailored ATS resume.")
 
     job_dict = {
         "id": job.id,
@@ -196,11 +196,11 @@ def tailor_for_job(
     profile_dict = {
         "id": profile.id,
         "name": profile.name or "Candidate",
-        "email": profile.email or "candidate@example.com",
-        "phone": profile.phone or "+91 9876543210",
-        "college": profile.college or "IIT Kharagpur",
-        "degree": profile.degree or "B.Tech in Engineering",
-        "graduation_year": profile.graduation_year or 2028,
+        "email": profile.email or "",
+        "phone": profile.phone or "",
+        "college": profile.college or "",
+        "degree": profile.degree or "",
+        "graduation_year": profile.graduation_year or 2026,
         "cgpa": profile.cgpa or 8.0,
         "skills": profile.skills or [],
         "projects": profile.categorized_projects or profile.projects or [],
@@ -397,3 +397,58 @@ def download_resume_pdf(application_id: int, db: Session = Depends(get_db)):
         filename=filename,
         headers={"Content-Disposition": f"inline; filename={filename}"}
     )
+
+@router.post("/{application_id}/update-draft")
+def update_application_draft(
+    application_id: int,
+    data: dict = Body(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Real-time save and re-compile endpoint:
+    Saves candidate's edited tailored resume text, cover letter, or answers,
+    and immediately re-renders the ATS-compliant 1-page PDF on disk.
+    """
+    row = db.get(Application, application_id)
+    if not row:
+        raise HTTPException(404, "Application not found")
+
+    edited_resume = data.get("tailored_resume") or data.get("edited_resume")
+    edited_cl = data.get("cover_letter") or data.get("edited_cover_letter")
+    edited_answers = data.get("answers") or data.get("edited_answers")
+
+    if edited_cl is not None:
+        row.cover_letter = edited_cl
+        row.user_edited = True
+
+    if edited_answers is not None:
+        row.answers = edited_answers
+        row.user_edited = True
+
+    if edited_resume is not None and edited_resume.strip():
+        row.tailored_resume = edited_resume
+        row.user_edited = True
+
+        os.makedirs("uploads", exist_ok=True)
+        pdf_filename = f"Tailored_Resume_App_{row.id}.pdf"
+        pdf_path = os.path.join("uploads", pdf_filename)
+        try:
+            ResumeTailorEngine.generate_pdf(edited_resume, pdf_path)
+            row.tailored_resume_pdf_path = pdf_path
+        except Exception as e:
+            pass
+
+    row.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(row)
+
+    return {
+        "status": "SUCCESS",
+        "message": "Draft updated and tailored PDF re-compiled successfully!",
+        "application_id": row.id,
+        "tailored_resume": row.tailored_resume,
+        "tailored_resume_pdf_path": row.tailored_resume_pdf_path,
+        "cover_letter": row.cover_letter,
+        "answers": row.answers,
+        "user_edited": row.user_edited,
+    }

@@ -1,3 +1,4 @@
+import React from "react";
 import {
   LayoutDashboard,
   FileCheck,
@@ -7,9 +8,11 @@ import {
   Zap,
   FolderGit2,
   Globe,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 
-export function Sidebar({ currentTab, setTab, awaitingCount, projectsCount }) {
+export function Sidebar({ currentTab, setTab, awaitingCount, projectsCount, collapsed = false, onToggleCollapse }) {
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
     {
@@ -37,31 +40,74 @@ export function Sidebar({ currentTab, setTab, awaitingCount, projectsCount }) {
   ];
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${collapsed ? "collapsed" : ""}`}>
       {/* Brand Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "32px", padding: "0 8px" }}>
-        <div
-          style={{
-            width: "36px",
-            height: "36px",
-            borderRadius: "10px",
-            background: "var(--primary)",
-            display: "grid",
-            placeItems: "center",
-            color: "white",
-            boxShadow: "0 4px 14px var(--primary-glow)",
-          }}
-        >
-          <Zap size={20} />
+      <div
+        className="brand-header"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: collapsed ? "center" : "space-between",
+          marginBottom: "28px",
+          padding: "0 4px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div
+            style={{
+              width: "36px",
+              height: "36px",
+              borderRadius: "10px",
+              background: "var(--primary)",
+              display: "grid",
+              placeItems: "center",
+              color: "white",
+              boxShadow: "0 4px 14px var(--primary-glow)",
+              flexShrink: 0,
+            }}
+          >
+            <Zap size={20} />
+          </div>
+          {!collapsed && (
+            <div className="brand-text">
+              <h2 style={{ fontSize: "17px", fontWeight: "800", letterSpacing: "-0.02em", color: "var(--text-primary)" }}>
+                Opportunity<span style={{ color: "var(--primary)" }}>OS</span>
+              </h2>
+              <p style={{ fontSize: "10.5px", color: "var(--text-muted)", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                Agentic Job Engine
+              </p>
+            </div>
+          )}
         </div>
-        <div>
-          <h2 style={{ fontSize: "18px", fontWeight: "800", letterSpacing: "-0.02em", color: "var(--text-primary)" }} className="brand-text">
-            Opportunity<span style={{ color: "var(--primary)" }}>OS</span>
-          </h2>
-          <p style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.08em" }} className="brand-text">
-            Agentic Job Engine
-          </p>
-        </div>
+
+        {onToggleCollapse && (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "var(--text-muted)",
+              cursor: "pointer",
+              padding: "6px",
+              borderRadius: "6px",
+              display: "grid",
+              placeItems: "center",
+              transition: "all 0.15s ease",
+            }}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "var(--text-primary)";
+              e.currentTarget.style.background = "var(--bg-card-subtle)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "var(--text-muted)";
+              e.currentTarget.style.background = "transparent";
+            }}
+          >
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+        )}
       </div>
 
       {/* Navigation Links */}
@@ -72,11 +118,12 @@ export function Sidebar({ currentTab, setTab, awaitingCount, projectsCount }) {
             <button
               key={item.id}
               onClick={() => setTab(item.id)}
+              title={item.label}
               style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "space-between",
-                padding: "11px 14px",
+                justifyContent: collapsed ? "center" : "space-between",
+                padding: collapsed ? "11px 0" : "11px 14px",
                 borderRadius: "10px",
                 border: "none",
                 background: isActive ? "var(--primary-subtle)" : "transparent",
@@ -86,10 +133,11 @@ export function Sidebar({ currentTab, setTab, awaitingCount, projectsCount }) {
                 cursor: "pointer",
                 transition: "all 0.15s ease",
                 textAlign: "left",
+                width: "100%",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <span style={{ color: isActive ? "var(--primary)" : "var(--text-muted)" }}>{item.icon}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", justifyContent: collapsed ? "center" : "flex-start" }}>
+                <span style={{ color: isActive ? "var(--primary)" : "var(--text-muted)", display: "grid", placeItems: "center" }}>{item.icon}</span>
                 <span className="nav-text">{item.label}</span>
               </div>
               {item.badge && (

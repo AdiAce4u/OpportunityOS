@@ -46,18 +46,24 @@ Your job is to analyze a candidate's complete Master CV (which may contain 40-50
    - **Projects**:
      * Select domain-relevant projects in `"selected_projects"`. Total items across Comps + Interns + Projects must be 4-5.
 
-3. **EXACT VERBATIM TEXT STYLE RETENTION (CRITICAL)**:
-   - Do NOT rewrite, condense, truncate, or paraphrase bullet points or descriptions!
-   - Keep the candidate's exact wording, phrasing, punctuation, and style from the Master CV.
-   - Do NOT convert non-bulleted text into bullets, and do NOT remove existing bullets.
-   - If an item has a description, keep it in full. If it has bullets, keep all bullets in full.
+3. **FULL-WIDTH LINE UTILIZATION & SINGLE-LINE BULLETS (CRITICAL)**:
+   - Modify and tighten EVERY bullet point across ALL sections (competitions, internships, projects, certifications, positions of responsibility, extracurriculars) so that it fits onto **EXACTLY ONE SINGLE LINE** (approx 95 to 118 characters).
+   - **PRESERVE 100% OF TECHNICAL MEANING, TOOLS & METRICS**:
+     Keep all technical keywords, libraries, numbers, metrics, and outcomes intact. Eliminate passive filler, redundant phrasing, and trailing words so each bullet stretches across the full horizontal printable width without breaking in half or wrapping onto a second short line.
+   - **NO HALF-LINE BREAKS**: Never split a sentence across two half lines. Every bullet must be a dense, impactful single-line ATS statement starting with a strong action verb.
+   - **COMPLETE A4 PAGE FILL**: The selected items and bullets must completely fill the single A4 sheet down to the very last line without leaving empty whitespace at the bottom and without spilling onto page 2.
 
-4. **CLEAN TITLES & NO TECH LINE**:
-   - Do NOT emit any `Tech: ...` subtitle lines.
+4. **SKILLS & EXPERTISE DOMAIN FILTERING**:
+   - For non-core tracks (`sde`, `data`, `finance`, `consult`): REMOVE all core hardware/mechanical tools (e.g. ROS, SolidWorks, ANSYS, STM32, Arduino, ESP32, CAD, FEA, Kinematics).
+   - For `core` track: RETAIN all robotics, embedded, CAD, and control systems stacks.
+   - Ensure each category line utilizes the full line width.
+
+5. **CLEAN TITLES & NO TECH LINE**:
+   - Do NOT emit any `Tech: ...` subtitle lines below titles.
    - Include date range on the header (e.g., `[Nov 2025 - Mar 2026]`).
 
-5. **STATIC SECTIONS PRESERVATION**:
-   - Skills, Coursework, Certifications, Positions of Responsibility, and Extra Curriculars are preserved verbatim from the Master CV in their exact text style. Do not invent or replace categories.
+6. **STATIC SECTIONS PRESERVATION**:
+   - Coursework, Certifications, Positions of Responsibility, and Extra Curriculars are preserved with single-line bullets. Include at most 5 extra-curricular activities, each formatted as a single complete line.
 
 7. **DOMAIN VALIDATION GUARDRAIL**:
    - If candidate Master CV contains **0** projects/internships matching the target job domain, return:
@@ -216,13 +222,8 @@ CANDIDATE MASTER CV (RAW TEXT):
 """
                 response = None
                 model_candidates = [
-                    settings.llm_model,
-                    "gemini-flash-latest",
-                    "gemini-3.8-flash",
-                    "gemini-3.5-flash",
-                    "gemini-3.5-flash-lite",
-                    "gemini-3.1-flash-lite",
-                    "gemini-pro-latest"
+                    settings.llm_model or "gemini-flash-latest",
+                    "gemini-flash-latest"
                 ]
                 seen_models = set()
                 for m_name in model_candidates:
@@ -238,6 +239,10 @@ CANDIDATE MASTER CV (RAW TEXT):
                             break
                     except Exception as me:
                         logger.warning(f"⚠️ [GeminiTailorAgent] {m_name} failed: {me}")
+                        me_str = str(me).lower()
+                        if "429" in me_str or "quota" in me_str or "resourceexhausted" in me_str or "rate limit" in me_str:
+                            logger.warning("⚠️ Gemini Quota limit reached (429). Switching immediately to deterministic AST Engine fallback.")
+                            break
 
                 if response and response.text:
                     raw_resp = response.text.strip()
@@ -343,10 +348,19 @@ CANDIDATE MASTER CV (RAW TEXT):
         # Filter domain competitions, internships, and projects
         domain_comps = [it for it in scored_comps if it[1].get("domain") == target_domain or it[0] >= 20.0]
         domain_interns = [it for it in scored_internships if it[1].get("domain") == target_domain or it[0] >= 20.0]
-        if not domain_interns and scored_internships:
-            domain_interns = scored_internships[:1]
 
         domain_projs = [it for it in scored_projects if it[1].get("domain") == target_domain or it[0] >= 20.0]
+        if len(domain_projs) < 3:
+            for it in scored_projects:
+                if it not in domain_projs:
+                    it_dom = (it[1].get("domain") or "").lower()
+                    if target_domain == "sde" and it_dom in ["sde", "data", "finance"]:
+                        domain_projs.append(it)
+                    elif target_domain == "data" and it_dom in ["data", "sde"]:
+                        domain_projs.append(it)
+                    elif target_domain == "core" and it_dom in ["core"]:
+                        domain_projs.append(it)
+
         if not domain_projs and scored_projects:
             domain_projs = scored_projects
 
@@ -357,7 +371,7 @@ CANDIDATE MASTER CV (RAW TEXT):
         total_used = len(selected_comps) + len(selected_internships)
         needed_projects = max(1, 5 - total_used)
         selected_projects = [prepare_item(it[1]) for it in domain_projs[:needed_projects]]
-        all_available_projects = [prepare_item(it[1]) for it in scored_projects]
+        all_available_projects = [prepare_item(it[1]) for it in domain_projs]
 
         return {
             "target_domain": target_domain,
@@ -368,3 +382,95 @@ CANDIDATE MASTER CV (RAW TEXT):
             "all_available_projects": all_available_projects,
             "rationale": f"Selected top domain-aligned experience in priority COMPS > INTERN > PROJECT."
         }
+
+    @staticmethod
+    def classify_projects_with_llm(projects: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Agentic LLM classifier using Gemini to accurately segregate master CV projects into technical domains:
+        'sde', 'data', 'core', 'finance', 'consult'.
+        Prevents mislabeling data/sde projects as core, or core robotics/embedded/mechanical projects as sde.
+        """
+        if not projects:
+            return []
+
+        api_key = settings.gemini_api_key or settings.llm_api_key or os.getenv("GEMINI_API_KEY", "")
+        if not api_key:
+            return projects
+
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=api_key)
+
+            prompt = """You are an expert technical domain classifier for engineering and software resumes.
+Classify each candidate project/internship/competition into EXACTLY ONE domain:
+- 'sde': Software Development, Web Applications, Backend, Frontend, Full Stack, Distributed Systems, Microservices, REST APIs, Databases, Compilers, Cloud Infra, Operating Systems, Graph/Routing Data Platforms. (No physical robotics or mechanical hardware).
+- 'data': Machine Learning, Deep Learning, Computer Vision (pure software/image classification/object detection), NLP, LLMs, GenAI, RAG, Data Science, Predictive Modeling, Time Series, ETL Pipelines, Data Analytics.
+- 'core': Core Engineering, Robotics, Autonomous Mobile Robots, ROS/ROS2, Gazebo, SLAM, Embedded Systems, Microcontrollers (STM32, Arduino, ESP32, FPGA), Drones, Rovers, Mechanical Design, CAD, SolidWorks, ANSYS, FEA, Kinematics, Control Systems (PID, LQR), Power Systems, Thermal Power Stations, Steam Turbines, Mechatronics, Formula Student.
+- 'finance': Quantitative Finance, Algorithmic Trading, Portfolio Optimization, Sharpe Ratio, Mean-Variance, Backtesting, Risk Analytics, Credit Risk Scorecards, Options/Derivatives Pricing, Order Books, Stock Forecasting, Financial Modeling, or work at financial institutions (e.g. Tata Motors Finance, Godrej Housing Finance).
+- 'consult': Management Consulting, Business Strategy, Market Entry Analysis, Due Diligence, Profitability Frameworks, Supply Chain Optimization, Business Intelligence Case Studies.
+
+PROJECTS TO CLASSIFY:
+"""
+            for idx, p in enumerate(projects):
+                name = p.get("name") or "Project"
+                desc = p.get("description") or ""
+                bullets_sample = " | ".join(p.get("bullets", [])[:2])
+                prompt += f"{idx}. Title: {name}\n   Summary: {desc} {bullets_sample}\n"
+
+            prompt += """
+Return a strict JSON array of objects, one for each project in order:
+[
+  {"index": 0, "domain": "sde | data | core | finance | consult"},
+  ...
+]
+Return ONLY raw JSON, no markdown formatting.
+"""
+            model_candidates = [
+                settings.llm_model or "gemini-flash-latest",
+                "gemini-flash-latest"
+            ]
+            response = None
+            for m_name in model_candidates:
+                if not m_name:
+                    continue
+                try:
+                    model = genai.GenerativeModel(m_name)
+                    response = model.generate_content(prompt)
+                    if response and response.text:
+                        break
+                except Exception as me:
+                    logger.warning(f"[classify_projects_with_llm] {m_name} failed: {me}")
+                    me_str = str(me).lower()
+                    if "429" in me_str or "quota" in me_str or "resourceexhausted" in me_str or "rate limit" in me_str:
+                        logger.warning("⚠️ Gemini Quota limit reached (429) in classification. Switching immediately to rule-based classification.")
+                        break
+
+            if response and response.text:
+                raw_json = response.text.strip().lstrip("```json").rstrip("```").strip()
+                parsed = json.loads(raw_json)
+                domain_map = {}
+                for item in parsed:
+                    idx = item.get("index")
+                    dom = (item.get("domain") or "").lower().strip()
+                    if dom in ["software", "dev"]:
+                        dom = "sde"
+                    if dom in ["ml", "ai"]:
+                        dom = "data"
+                    if dom in ["robotics", "embedded", "mechanical", "hardware"]:
+                        dom = "core"
+                    if dom in ["quant"]:
+                        dom = "finance"
+                    if dom in ["strategy", "business", "product"]:
+                        dom = "consult"
+                    if idx is not None and dom in ["sde", "data", "core", "finance", "consult"]:
+                        domain_map[int(idx)] = dom
+
+                for idx, p in enumerate(projects):
+                    if idx in domain_map:
+                        p["domain"] = domain_map[idx]
+                logger.info(f"✅ [GeminiTailorAgent] Successfully classified {len(domain_map)} projects via LLM.")
+        except Exception as e:
+            logger.warning(f"⚠️ [classify_projects_with_llm] LLM classification error: {e}")
+
+        return projects
+

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Sparkles, Sun, Moon } from "lucide-react";
+import { Sparkles, Sun, Moon, PanelLeftOpen, PanelLeftClose } from "lucide-react";
 
 export function Navbar({
   running,
@@ -9,6 +9,8 @@ export function Navbar({
   activeGoal,
   onUpdateGoal,
   onOpenCustomJD,
+  isSidebarCollapsed,
+  onToggleSidebar,
 }) {
   const [theme, setTheme] = useState(() => {
     try {
@@ -31,7 +33,35 @@ export function Navbar({
 
   return (
     <header className="top-navbar">
-      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        {onToggleSidebar && (
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "var(--text-muted)",
+              cursor: "pointer",
+              padding: "6px",
+              borderRadius: "6px",
+              display: "grid",
+              placeItems: "center",
+              transition: "all 0.15s ease",
+            }}
+            title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "var(--text-primary)";
+              e.currentTarget.style.background = "var(--bg-card-subtle)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "var(--text-muted)";
+              e.currentTarget.style.background = "transparent";
+            }}
+          >
+            {isSidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+        )}
         <div
           style={{
             width: "10px",

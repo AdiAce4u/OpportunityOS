@@ -192,26 +192,50 @@ code, pre, .font-mono {
 
 .app-container {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   background-color: var(--bg-main);
 }
 
 .sidebar {
   width: 270px;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: var(--bg-sidebar);
   border-right: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
   padding: 24px 16px;
   flex-shrink: 0;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s ease, background-color 0.2s ease, border-color 0.2s ease;
+  position: relative;
+}
+
+.sidebar.collapsed {
+  width: 76px;
+  padding: 24px 10px;
+}
+
+.sidebar.collapsed .brand-text,
+.sidebar.collapsed .nav-text,
+.sidebar.collapsed .nav-badge,
+.sidebar.collapsed .sidebar-footer-text {
+  display: none !important;
+}
+
+.sidebar.collapsed .brand-header {
+  justify-content: center;
 }
 
 .main-content {
   flex: 1;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  max-width: calc(100vw - 270px);
   min-width: 0;
   background-color: var(--bg-main);
 }

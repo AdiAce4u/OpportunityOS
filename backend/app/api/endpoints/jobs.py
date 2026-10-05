@@ -161,19 +161,63 @@ def search_job_portals(request: PortalSearchRequest, db: Session = Depends(get_d
 
     db.commit()
 
-    # Query all jobs matching this category to display complete openings
-    db_cat_jobs = db.query(Job).filter(
-        (Job.category == category) | (Job.category == ("sde" if category == "software" else category))
-    ).order_by(Job.match_score.desc()).all()
+    # Query all jobs matching this category
+    cat_condition = (Job.category == category) | (Job.category == ("sde" if category == "software" else category))
+    all_cat_jobs = db.query(Job).filter(cat_condition).order_by(Job.match_score.desc()).all()
+    candidate_jobs = all_cat_jobs if all_cat_jobs else saved_jobs
 
-    final_display = db_cat_jobs if db_cat_jobs else saved_jobs
+    def matches_site(j_site: str, allowed: Optional[List[str]]) -> bool:
+        if not allowed or len(allowed) == 4:
+            return True
+        js = (j_site or "").lower()
+        for s in allowed:
+            sl = s.lower()
+            if sl == "linkedin" and ("linkedin" in js or "company_careers" in js):
+                return True
+            if sl == "wellfound" and ("wellfound" in js or "angel" in js):
+                return True
+            if sl == "indeed" and ("indeed" in js or "job_board" in js):
+                return True
+            if sl == "glassdoor" and "glassdoor" in js:
+                return True
+            if sl in js:
+                return True
+        return False
+
+    filtered_jobs = []
+    for j in candidate_jobs:
+        # 1. Filter by Portal Sites
+        if request.sites and not matches_site(j.site, request.sites):
+            continue
+
+        # 2. Filter by Remote preference
+        if request.is_remote:
+            loc_lower = (j.location or "").lower()
+            if not (j.is_remote or "remote" in loc_lower):
+                continue
+
+        # 3. Filter by Location
+        if request.location and request.location.strip().lower() not in ["india", "all", "any", ""]:
+            target_loc = request.location.strip().lower()
+            loc_lower = (j.location or "").lower()
+            if not (target_loc in loc_lower or j.is_remote or "remote" in loc_lower):
+                continue
+
+        filtered_jobs.append(j)
+
+    # Sort by match score
+    filtered_jobs.sort(key=lambda x: x.match_score or 0.0, reverse=True)
+
+    # Slicing by results_wanted (Max Results to Display)
+    max_count = request.results_wanted if (request.results_wanted and request.results_wanted > 0) else 15
+    final_display = filtered_jobs[:max_count]
 
     return {
         "status": "SUCCESS",
         "search_term": search_term,
         "category": category,
         "location": request.location,
-        "total_discovered": len(final_display),
+        "total_discovered": len(filtered_jobs),
         "jobs": [
             {
                 "id": j.id,
@@ -190,10 +234,11 @@ def search_job_portals(request: PortalSearchRequest, db: Session = Depends(get_d
                 "matched_keywords": j.matched_keywords,
                 "salary_text": j.salary_text,
                 "display_salary": j.display_salary,
+                "normalized_salary": j.normalized_salary or (CompensationParser._parse_from_text(j.salary_text or j.display_salary or '') or {}).get('normalized_yearly_salary', 0.0),
                 "description": j.description,
                 "url": j.url,
             }
-            for j in sorted(final_display, key=lambda x: x.match_score, reverse=True)
+            for j in final_display
         ]
     }
 

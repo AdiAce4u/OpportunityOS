@@ -14,6 +14,9 @@ import {
   TrendingUp,
   Heart,
   ChevronDown,
+  Check,
+  Zap,
+  ArrowUpDown,
 } from "lucide-react";
 import { api } from "../services/api";
 
@@ -28,6 +31,7 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
   const [isRemote, setIsRemote] = useState(false);
   const [resultsCount, setResultsCount] = useState(15);
   const [selectedSites, setSelectedSites] = useState(["linkedin", "indeed", "glassdoor", "wellfound"]);
+  const [sortBy, setSortBy] = useState("match_score"); // "match_score" | "stipend" | "company"
 
   const [searching, setSearching] = useState(false);
   const [discoveredJobs, setDiscoveredJobs] = useState([]);
@@ -93,6 +97,77 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
     }
   };
 
+  // Parse numeric salary safely for client-side sorting
+  const parseSalaryNumeric = (job) => {
+    if (job.normalized_salary && job.normalized_salary > 0) {
+      return job.normalized_salary;
+    }
+    const s = (job.display_salary || job.salary_text || "").toLowerCase();
+    const lpaMatch = s.match(/(\d+(?:\.\d+)?)\s*(?:-|to)?\s*(\d+(?:\.\d+)?)?\s*lpa/i);
+    if (lpaMatch) {
+      const val = lpaMatch[2] ? (parseFloat(lpaMatch[1]) + parseFloat(lpaMatch[2])) / 2 : parseFloat(lpaMatch[1]);
+      return val * 100000;
+    }
+    const moMatch = s.match(/(?:₹|\$)?\s*(\d{1,3}(?:,\d{3})*|\d+)\s*(?:\/|per\s+)?(?:month|mo)/i);
+    if (moMatch) {
+      const raw = moMatch[1].replace(/,/g, "");
+      const val = parseFloat(raw);
+      return val * 12;
+    }
+    return 0;
+  };
+
+  const matchesSite = (jobSite) => {
+    if (!selectedSites || selectedSites.length === 0 || selectedSites.length === 4) return true;
+    const js = (jobSite || "").toLowerCase();
+    return selectedSites.some((s) => {
+      const sl = s.toLowerCase();
+      if (sl === "linkedin") return js.includes("linkedin") || js.includes("company_careers");
+      if (sl === "wellfound") return js.includes("wellfound") || js.includes("angel");
+      if (sl === "indeed") return js.includes("indeed") || js.includes("job_board");
+      if (sl === "glassdoor") return js.includes("glassdoor");
+      return js.includes(sl);
+    });
+  };
+
+  // Instant reactive client-side filtering and slicing
+  const filteredJobs = discoveredJobs.filter((job) => {
+    if (!matchesSite(job.site)) return false;
+
+    if (isRemote) {
+      const loc = (job.location || "").toLowerCase();
+      const desc = (job.description || "").toLowerCase();
+      if (!(job.is_remote || loc.includes("remote") || desc.includes("remote"))) {
+        return false;
+      }
+    }
+
+    if (location && location.trim() && !["india", "all", "any"].includes(location.trim().toLowerCase())) {
+      const loc = (job.location || "").toLowerCase();
+      const targetLoc = location.trim().toLowerCase();
+      if (!loc.includes(targetLoc) && !loc.includes("remote") && !job.is_remote) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  const sortedJobs = [...filteredJobs].sort((a, b) => {
+    if (sortBy === "stipend") {
+      const salA = parseSalaryNumeric(a);
+      const salB = parseSalaryNumeric(b);
+      return salB - salA;
+    } else if (sortBy === "company") {
+      return (a.company || "").localeCompare(b.company || "");
+    } else {
+      return (b.match_score || 0) - (a.match_score || 0);
+    }
+  });
+
+  const maxDisplay = parseInt(resultsCount) || 15;
+  const displayedJobs = sortedJobs.slice(0, maxDisplay);
+
   // Fetch jobs for track or custom query text
   const executeSearch = async (queryOverride = null) => {
     setSearching(true);
@@ -118,7 +193,7 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
         category: category,
         query: textQuery,
         location: location,
-        results_wanted: parseInt(resultsCount),
+        results_wanted: parseInt(resultsCount) || 15,
         is_remote: isRemote,
         sites: selectedSites,
         profile_id: profile?.id,
@@ -127,7 +202,7 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
       const res = await api.searchJobPortals(payload);
       const jobsList = res.jobs || [];
       setDiscoveredJobs(jobsList);
-      setStatusMessage(`✓ Loaded ${jobsList.length} current job openings for [${textQuery.toUpperCase()}].`);
+      setStatusMessage(`Loaded ${jobsList.length} current job openings for [${textQuery.toUpperCase()}].`);
     } catch (err) {
       setStatusMessage(`Search notice: ${err.message}`);
     } finally {
@@ -390,7 +465,7 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
                         e.currentTarget.style.color = "var(--text-secondary)";
                       }}
                     >
-                      <span>⚡</span>
+                      <Zap size={12} color="var(--primary)" />
                       <span>{role}</span>
                     </div>
                   ))}
@@ -494,7 +569,7 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
               borderRadius: "8px",
               background: "var(--bg-card-subtle)",
               border: "1px solid var(--border-subtle)",
-              color: statusMessage.includes("✓") ? "var(--accent-emerald-text)" : "var(--primary-text)",
+              color: statusMessage.includes("Loaded") ? "var(--accent-emerald-text)" : "var(--primary-text)",
               fontSize: "12.5px",
               fontWeight: "600",
             }}
@@ -506,24 +581,52 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
 
       {/* Discovered Opportunities Grid */}
       <div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
           <div>
             <h3 style={{ fontSize: "17px", fontWeight: "800", color: "var(--text-primary)" }}>
-              {selectedTrack.toUpperCase()} Openings ({discoveredJobs.length})
+              {selectedTrack.toUpperCase()} Openings ({displayedJobs.length}{filteredJobs.length > displayedJobs.length ? ` of ${filteredJobs.length}` : ""})
             </h3>
             <p style={{ fontSize: "12.5px", color: "var(--text-secondary)" }}>
-              All currently available roles ranked by Master CV project similarity.
+              All currently available roles ranked by Master CV project similarity and filtered to your preferences.
             </p>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "4px" }}>
+              <ArrowUpDown size={13} /> Sort by:
+            </span>
+            <select
+              className="input"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              style={{
+                fontSize: "12px",
+                padding: "6px 10px",
+                height: "auto",
+                background: "var(--bg-card-subtle)",
+                color: "var(--text-primary)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "6px",
+              }}
+            >
+              <option value="match_score">Match Score (Best Fit)</option>
+              <option value="stipend">Stipend / Salary (High to Low)</option>
+              <option value="company">Company (A - Z)</option>
+            </select>
           </div>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          {discoveredJobs.length === 0 ? (
+          {displayedJobs.length === 0 ? (
             <div className="card" style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
-              {searching ? "Searching portals and loading openings..." : "No job openings found. Click 'Search Portals in Real-Time' to refresh."}
+              {searching
+                ? "Searching portals and loading openings..."
+                : filteredJobs.length === 0 && discoveredJobs.length > 0
+                ? "No opportunities match the active filters (Remote / Portals / Location). Try broadening filters or unchecking Remote Only."
+                : "No job openings found. Click 'Search Portals in Real-Time' to refresh."}
             </div>
           ) : (
-            discoveredJobs.map((job, idx) => {
+            displayedJobs.map((job, idx) => {
               const score = job.match_score || 88.0;
               const isTailoring = tailoringJobId === job.id;
 
@@ -652,9 +755,12 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
                               borderRadius: "4px",
                               fontSize: "10.5px",
                               fontWeight: "600",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "3px",
                             }}
                           >
-                            ✓ {kw}
+                            <Check size={10} /> {kw}
                           </span>
                         ))}
                       </div>
@@ -670,7 +776,7 @@ export function PortalJobDiscovery({ profile, onOpenReviewModal, onTailorAndAppl
                       style={{ fontSize: "12.5px", justifyContent: "center", padding: "10px 14px" }}
                     >
                       <Sparkles size={14} className={isTailoring ? "spin" : ""} />
-                      <span>{isTailoring ? "Tailoring ATS CV..." : "⚡ Tailor 1-Page ATS CV"}</span>
+                      <span>{isTailoring ? "Tailoring ATS CV..." : "Tailor 1-Page ATS CV"}</span>
                     </button>
 
                     {job.url && (

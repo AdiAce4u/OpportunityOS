@@ -24,7 +24,7 @@ class UserProfile(Base):
     preferred_locations: Mapped[list] = mapped_column(JSON, default=list)
     remote_preference: Mapped[bool] = mapped_column(Boolean, default=True)
     minimum_salary: Mapped[float | None] = mapped_column(Float, nullable=True)
-    work_authorization: Mapped[str] = mapped_column(String(120), default="Eligible to work in India")
+    work_authorization: Mapped[str] = mapped_column(String(120), default="")
     prefer_companies: Mapped[list] = mapped_column(JSON, default=list)
     avoid_companies: Mapped[list] = mapped_column(JSON, default=list)
     
@@ -32,7 +32,7 @@ class UserProfile(Base):
     master_cv_markdown: Mapped[str] = mapped_column(Text, default="")
     resume_filename: Mapped[str] = mapped_column(String(255), default="")
     resume_text: Mapped[str] = mapped_column(Text, default="")
-    master_cv_pdf_path: Mapped[str] = mapped_column(String(255), default="uploads/mastercv.pdf")
+    master_cv_pdf_path: Mapped[str] = mapped_column(String(255), default="")
     saved_tailored_cvs: Mapped[list] = mapped_column(JSON, default=list)
     parsed_data: Mapped[dict] = mapped_column(JSON, default=dict)
     

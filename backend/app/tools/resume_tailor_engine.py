@@ -154,7 +154,7 @@ class ResumeTailorEngine:
         
         # If master_cv_text is empty, build a synthetic representation from profile fields dynamically
         if not master_cv_text:
-            c_name = profile.get('name') or "Candidate"
+            c_name = (profile.get('name') or "Candidate").upper()
             c_roll = profile.get('roll') or ""
             c_deg = profile.get('degree') or "B.Tech in Engineering"
             c_col = profile.get('college') or "IIT Kharagpur"
@@ -193,7 +193,7 @@ class ResumeTailorEngine:
         # 1. Candidate Header
         header_lines = sections_map.get("HEADER", [])
         if not header_lines:
-            c_name = profile.get("name", "Candidate")
+            c_name = (profile.get("name") or "Candidate").upper()
             c_roll = profile.get("roll", "")
             c_deg = profile.get("degree", "B.Tech in Engineering")
             header_lines = [f"{c_name} | {c_roll}".strip(" |"), c_deg]
@@ -244,8 +244,9 @@ class ResumeTailorEngine:
                 for comp in selected_competitions:
                     append_item_lines(comp, doc)
 
-            # 3B. Internships and Projects Section (Determined by internship count)
-            if len(selected_internships) >= 2 or (has_separate_internships and selected_internships):
+            # 3B. Internships and Projects Section (Strictly determined by internship count)
+            intern_count = len(selected_internships)
+            if intern_count >= 2:
                 doc.append("INTERNSHIPS")
                 for int_item in selected_internships[:2]:
                     append_item_lines(int_item, doc)
@@ -253,7 +254,7 @@ class ResumeTailorEngine:
                 doc.append("PROJECTS")
                 for p in projects_list:
                     append_item_lines(p, doc)
-            elif len(selected_internships) == 1:
+            elif intern_count == 1:
                 doc.append("INTERNSHIPS AND PROJECTS")
                 for int_item in selected_internships[:1]:
                     append_item_lines(int_item, doc)
@@ -277,10 +278,11 @@ class ResumeTailorEngine:
 
             return "\n".join(doc)
 
-        # Baseline projects limit
-        if len(selected_internships) >= 2 or (has_separate_internships and selected_internships):
+        # Baseline projects limit governed by number of internships and competitions
+        intern_count = len(selected_internships)
+        if intern_count >= 2:
             base_limit = max(1, 4 - (len(selected_competitions) + len(selected_internships[:2])))
-        elif len(selected_internships) == 1:
+        elif intern_count == 1:
             base_limit = max(1, 4 - (len(selected_competitions) + 1))
         else:
             base_limit = max(2, 4 - len(selected_competitions))

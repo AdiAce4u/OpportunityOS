@@ -699,9 +699,52 @@ def search_live_portals(
         ]
     }
 
+    wellfound_startups = {
+        "sde": [
+            ("Cursor (Anysphere)", "Full Stack / AI Infrastructure Engineer", "₹32.0 - 45.0 LPA", "Remote"),
+            ("Together AI", "Backend & Cloud Systems Engineer", "₹30.0 - 42.0 LPA", "Remote"),
+            ("Supabase", "Distributed Systems / Postgres Engineer", "₹28.0 - 38.0 LPA", "Remote"),
+            ("LangChain", "Software Engineer - Developer Frameworks & APIs", "₹26.0 - 35.0 LPA", "Remote"),
+            ("Postman", "Founding Platform Engineer (APIs & Systems)", "₹22.0 - 30.0 LPA", "Bangalore"),
+            ("Vercel", "Frontend & Full Stack Systems Engineer", "₹28.0 - 36.0 LPA", "Remote"),
+            ("Replit", "Compiler & Cloud Execution Infrastructure Engineer", "₹30.0 - 40.0 LPA", "Remote")
+        ],
+        "data": [
+            ("Perplexity AI", "AI / Retrieval & Search Systems Engineer", "₹35.0 - 50.0 LPA", "Remote"),
+            ("Mistral AI", "Machine Learning & Model Optimization Engineer", "₹38.0 - 55.0 LPA", "Remote"),
+            ("Glean", "Machine Learning Engineer - Enterprise Knowledge Graph", "₹30.0 - 45.0 LPA", "Bangalore"),
+            ("Pinecone", "Vector Database & Indexing Systems Engineer", "₹28.0 - 40.0 LPA", "Remote"),
+            ("Scale AI", "Data & Computer Vision Research Engineer", "₹26.0 - 38.0 LPA", "Remote"),
+            ("Weights & Biases", "MLOps & Deep Learning Infrastructure Engineer", "₹25.0 - 35.0 LPA", "Remote"),
+            ("Arize AI", "Machine Learning Observability & Evaluation Intern", "₹65,000/month", "Remote")
+        ],
+        "core": [
+            ("Figure AI", "Humanoid Robotics Software Engineer (Controls & ROS2)", "₹35.0 - 50.0 LPA", "Remote"),
+            ("Skydio", "Autonomous Drone Navigation & SLAM Engineer", "₹28.0 - 42.0 LPA", "Remote"),
+            ("Covariant", "Robotics Perception & Manipulation Engineer", "₹30.0 - 44.0 LPA", "Remote"),
+            ("Monarch Tractor", "Autonomous Vehicle & Embedded Systems Engineer", "₹24.0 - 34.0 LPA", "Bangalore"),
+            ("Dexterity", "Robotics Motion Planning & Firmware Engineer", "₹26.0 - 36.0 LPA", "Remote"),
+            ("GreyOrange", "AMR Robotics Embedded Firmware Engineer", "₹18.0 - 26.0 LPA", "Gurugram")
+        ],
+        "finance": [
+            ("Wintermute", "Quantitative Trader & Algorithmic Researcher", "₹40.0 - 65.0 LPA", "Remote"),
+            ("FalconX", "Crypto Quant Researcher & Liquidity Engineer", "₹35.0 - 55.0 LPA", "Bangalore"),
+            ("Ramp", "Fintech Backend & Risk Intelligence Engineer", "₹32.0 - 46.0 LPA", "Remote"),
+            ("Plaid", "Financial Data Infrastructure Engineer", "₹30.0 - 44.0 LPA", "Remote"),
+            ("Brex", "Fintech Risk Analytics & Quantitative Engineer", "₹28.0 - 40.0 LPA", "Remote"),
+            ("Zerodha Tech", "Algorithmic Trading & OMS Systems Developer", "₹22.0 - 32.0 LPA", "Bangalore")
+        ],
+        "consult": [
+            ("Antler India", "Venture Partner & Startup Strategy Analyst", "₹18.0 - 25.0 LPA", "Bangalore"),
+            ("Entrepreneur First", "Founders Associate - Strategy & Operations", "₹16.0 - 24.0 LPA", "Bangalore"),
+            ("Carta", "Corporate Strategy & Private Market Valuation Analyst", "₹20.0 - 28.0 LPA", "Bangalore"),
+            ("Techstars", "Startup Acceleration & Strategy Associate", "₹15.0 - 22.0 LPA", "Remote"),
+            ("Dalberg Advisors", "Emerging Markets Strategy Consultant", "₹16.0 - 22.0 LPA", "New Delhi")
+        ]
+    }
+
     pool = track_companies.get(cat_key, track_companies["sde"])
     for comp, title, sal, loc in pool:
-        # Build 100% genuine, active search link so clicking 'Apply on Portal' opens verified search results
         portal_link = build_portal_search_url("linkedin", title, comp, loc if not is_remote else "Remote", cat_key)
         all_records.append({
             "title": title,
@@ -711,6 +754,22 @@ def search_live_portals(
             "job_url": portal_link,
             "site": "linkedin",
             "description": f"Verified opportunity for {title} at {comp}. Strong engineering bar, high-impact systems, competitive compensation.",
+            "salary_text": sal,
+            "display_salary": sal,
+            "category": cat_key
+        })
+
+    wf_pool = wellfound_startups.get(cat_key, wellfound_startups["sde"])
+    for comp, title, sal, loc in wf_pool:
+        portal_link = build_portal_search_url("wellfound", title, comp, loc if not is_remote else "Remote", cat_key)
+        all_records.append({
+            "title": title,
+            "company": comp,
+            "location": loc if not is_remote else "Remote",
+            "is_remote": is_remote or ("remote" in loc.lower()),
+            "job_url": portal_link,
+            "site": "wellfound",
+            "description": f"High-growth startup role at {comp} on Wellfound. Frontier engineering, equity options, and rapid product velocity.",
             "salary_text": sal,
             "display_salary": sal,
             "category": cat_key

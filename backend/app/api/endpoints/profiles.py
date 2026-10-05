@@ -76,6 +76,14 @@ async def upload_master_cv(
     # Parse with MasterCVParser
     parsed = MasterCVParser.parse_full_master_cv(text, filename=filename)
 
+    # Enhance project classification via Gemini LLM
+    try:
+        from app.tools.gemini_tailor_agent import GeminiTailorAgent
+        if parsed.get("projects"):
+            parsed["projects"] = GeminiTailorAgent.classify_projects_with_llm(parsed["projects"])
+    except Exception as ce:
+        pass
+
     # Save raw file to uploads directory
     os.makedirs("uploads", exist_ok=True)
     file_path = os.path.join("uploads", filename)
@@ -89,38 +97,24 @@ async def upload_master_cv(
     if not profile:
         profile = db.query(UserProfile).first()
     if not profile:
-        profile = UserProfile(name=parsed["name"] or "Candidate")
+        profile = UserProfile(name=parsed.get("name") or "")
         db.add(profile)
         db.flush()
 
     # Update profile fields
-    if parsed.get("name"):
-        profile.name = parsed["name"]
-    if parsed.get("email"):
-        profile.email = parsed["email"]
-    if parsed.get("phone"):
-        profile.phone = parsed["phone"]
-    if parsed.get("college"):
-        profile.college = parsed["college"]
-    if parsed.get("degree"):
-        profile.degree = parsed["degree"]
-    if parsed.get("graduation_year"):
-        profile.graduation_year = parsed["graduation_year"]
-    if parsed.get("cgpa") is not None:
-        profile.cgpa = parsed["cgpa"]
+    profile.name = parsed.get("name") or profile.name or ""
+    profile.email = parsed.get("email") or profile.email or ""
+    profile.phone = parsed.get("phone") or profile.phone or ""
+    profile.college = parsed.get("college") or profile.college or ""
+    profile.degree = parsed.get("degree") or profile.degree or ""
+    profile.graduation_year = parsed.get("graduation_year")
+    profile.cgpa = parsed.get("cgpa")
 
-    # Merge skills
-    existing_skills = list(profile.skills or [])
-    for s in (parsed.get("skills") or []):
-        if s not in existing_skills:
-            existing_skills.append(s)
-    profile.skills = existing_skills
-
-    # Save categorized projects
-    profile.projects = parsed.get("projects", [])
-    profile.categorized_projects = parsed.get("projects", [])
-    if parsed.get("experience"):
-        profile.experience = parsed["experience"]
+    # Set skills, projects, and experience directly from parsed Master CV
+    profile.skills = parsed.get("skills") or []
+    profile.projects = parsed.get("projects") or []
+    profile.categorized_projects = parsed.get("projects") or []
+    profile.experience = parsed.get("experience") or []
 
     profile.master_cv_markdown = text
     profile.resume_filename = filename
@@ -337,4 +331,94 @@ def get_profile_projects(profile_id: int, db: Session = Depends(get_db)):
         "domains": by_domain,
         "all_projects": projects
     }
+
+@router.post("/reset-all")
+def reset_all_profiles(db: Session = Depends(get_db)):
+    """
+    Resets candidate profile and applications back to completely blank initial state
+    before any master CV is uploaded.
+    """
+    db.query(Application).delete()
+    profiles = db.query(UserProfile).all()
+    for p in profiles:
+        p.name = ""
+        p.email = ""
+        p.phone = ""
+        p.graduation_year = None
+        p.degree = ""
+        p.college = ""
+        p.cgpa = None
+        p.skills = []
+        p.projects = []
+        p.categorized_projects = []
+        p.experience = []
+        p.master_cv_markdown = ""
+        p.resume_filename = ""
+        p.resume_text = ""
+        p.master_cv_pdf_path = ""
+        p.saved_tailored_cvs = []
+        p.parsed_data = {}
+    db.commit()
+    return {"status": "SUCCESS", "message": "Profile and applications reset to blank initial state."}
+
+@router.post("/reclassify-projects")
+def reclassify_profile_projects(
+    payload: dict = Body(default={}),
+    db: Session = Depends(get_db)
+):
+    """
+    Re-runs LLM domain classification on candidate's master CV projects across domains:
+    'sde', 'data', 'core', 'finance', 'consult'.
+    """
+    profile_id = payload.get("profile_id")
+    profile = db.get(UserProfile, profile_id) if profile_id else db.query(UserProfile).first()
+    if not profile:
+        raise HTTPException(404, "Profile not found")
+
+    projects = profile.categorized_projects or profile.projects or []
+    if not projects and profile.master_cv_markdown:
+        parsed = MasterCVParser.parse_full_master_cv(profile.master_cv_markdown)
+        projects = parsed.get("projects") or []
+
+    if not projects:
+        return {"status": "SUCCESS", "message": "No projects found to classify.", "total_projects": 0, "projects": []}
+
+    # 1. First run updated deterministic taxonomy
+    for p in projects:
+        full_text = f"{p.get('name', '')} {p.get('dates', '')}\n{p.get('description', '')}\n" + "\n".join(p.get('bullets', []))
+        p['domain'] = MasterCVParser.infer_domain(full_text)
+
+    # 2. Invoke Gemini LLM for AI project classification
+    try:
+        from app.tools.gemini_tailor_agent import GeminiTailorAgent
+        projects = GeminiTailorAgent.classify_projects_with_llm(projects)
+    except Exception as e:
+        pass
+
+    profile.projects = projects
+    profile.categorized_projects = projects
+    db.commit()
+    db.refresh(profile)
+
+    by_domain = {}
+    for p in projects:
+        dom = p.get("domain", "general")
+        by_domain.setdefault(dom, []).append(p)
+
+    return {
+        "status": "SUCCESS",
+        "message": f"Successfully classified {len(projects)} projects across domains with AI!",
+        "total_projects": len(projects),
+        "domain_breakdown": {k: len(v) for k, v in by_domain.items()},
+        "projects": projects,
+        "profile": {
+            "id": profile.id,
+            "name": profile.name,
+            "skills": profile.skills,
+            "projects": profile.projects,
+            "categorized_projects": profile.categorized_projects,
+            "experience": profile.experience,
+        }
+    }
+
 
