@@ -20,7 +20,7 @@ import {
   BookmarkCheck,
   Sparkles,
 } from "lucide-react";
-import { api } from "../services/api";
+import { api, API_BASE, API_HOST } from "../services/api";
 
 export function ProfileEditor({ profile, onSaveProfile }) {
   const [formData, setFormData] = useState(profile || {
@@ -76,7 +76,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
   const savedTailoredCvs = formData.saved_tailored_cvs || profile?.saved_tailored_cvs || [];
 
   // Determine active document
-  let activePdfUrl = `http://localhost:8000/api/profiles/${formData.id || profile?.id || 1}/master-cv-pdf`;
+  let activePdfUrl = `${API_BASE}/profiles/${formData.id || profile?.id || 1}/master-cv-pdf`;
   let activeFilename = formData.resume_filename || profile?.resume_filename || "mastercv.pdf";
   let activeTitle = "Master CV";
   let activeSubtitle = "Active Ground Truth Source";
@@ -87,7 +87,7 @@ export function ProfileEditor({ profile, onSaveProfile }) {
     const found = savedTailoredCvs.find((c) => c.id === selectedCvKey || c.filename === selectedCvKey);
     if (found) {
       activeTailoredCv = found;
-      activePdfUrl = found.pdf_url.startsWith("http") ? found.pdf_url : `http://localhost:8000${found.pdf_url}`;
+      activePdfUrl = found.pdf_url.startsWith("http") ? found.pdf_url : `${API_HOST}${found.pdf_url}`;
       activeFilename = found.filename;
       activeTitle = found.filename;
       activeSubtitle = `${found.company} • ${found.role}`;

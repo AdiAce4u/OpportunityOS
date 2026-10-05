@@ -6,6 +6,8 @@ from app.models import UserProfile, Job, Application, FollowUpEvent
 from app.tools.cv_parser_engine import MasterCVParser
 from app.tools.portal_search_engine import ROLE_CATEGORIES, CVProjectMatcher, CompensationParser
 
+APP_HOST = os.getenv("APP_HOST", "https://opportunityos1.onrender.com").rstrip("/")
+
 SAMPLE_JOBS = [
     {
         "external_id": "xyz-robotics-001",
@@ -28,7 +30,7 @@ SAMPLE_JOBS = [
         "experience_requirements": "0-1 years / Student",
         "eligibility": {"graduation_year_min": 2026, "graduation_year_max": 2028, "degree": ["B.Tech", "M.Tech", "Dual Degree"]},
         "deadline": "2026-11-15",
-        "url": "http://localhost:8000/portal/apply/xyz-robotics-001",
+        "url": f"{APP_HOST}/portal/apply/xyz-robotics-001",
         "application_method": "form",
         "required_documents": ["resume", "cover_letter"],
         "source": "company_careers",
@@ -62,7 +64,7 @@ SAMPLE_JOBS = [
         "experience_requirements": "0-1 years",
         "eligibility": {"graduation_year_min": 2026, "graduation_year_max": 2028},
         "deadline": "2026-10-31",
-        "url": "http://localhost:8000/portal/apply/abc-ai-002",
+        "url": f"{APP_HOST}/portal/apply/abc-ai-002",
         "application_method": "form",
         "required_documents": ["resume"],
         "source": "job_board",
@@ -96,7 +98,7 @@ SAMPLE_JOBS = [
         "experience_requirements": "0-2 years",
         "eligibility": {"graduation_year_min": 2026, "graduation_year_max": 2028},
         "deadline": "2026-11-20",
-        "url": "http://localhost:8000/portal/apply/def-auto-003",
+        "url": f"{APP_HOST}/portal/apply/def-auto-003",
         "application_method": "form",
         "required_documents": ["resume", "cover_letter"],
         "source": "company_careers",
@@ -130,7 +132,7 @@ SAMPLE_JOBS = [
         "experience_requirements": "Student / 0-1 years",
         "eligibility": {"graduation_year_min": 2026, "graduation_year_max": 2028},
         "deadline": "2026-12-01",
-        "url": "http://localhost:8000/portal/apply/neural-drive-004",
+        "url": f"{APP_HOST}/portal/apply/neural-drive-004",
         "application_method": "form",
         "required_documents": ["resume", "cover_letter"],
         "source": "github_careers",
@@ -164,7 +166,7 @@ SAMPLE_JOBS = [
         "experience_requirements": "0-1 years",
         "eligibility": {"graduation_year_min": 2026, "graduation_year_max": 2028},
         "deadline": "2026-11-10",
-        "url": "http://localhost:8000/portal/apply/apex-robotics-005",
+        "url": f"{APP_HOST}/portal/apply/apex-robotics-005",
         "application_method": "form",
         "required_documents": ["resume"],
         "source": "company_careers",
@@ -198,7 +200,7 @@ SAMPLE_JOBS = [
         "experience_requirements": "8+ years",
         "eligibility": {"graduation_year_min": 2010, "graduation_year_max": 2018, "required_min_years_experience": 8},
         "deadline": "2026-10-15",
-        "url": "http://localhost:8000/portal/apply/ineligible-senior-006",
+        "url": f"{APP_HOST}/portal/apply/ineligible-senior-006",
         "application_method": "form",
         "required_documents": ["resume"],
         "source": "job_board",

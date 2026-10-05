@@ -1,4 +1,5 @@
-const API_BASE = "http://localhost:8000/api";
+export const API_HOST = (import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") || "https://opportunityos1.onrender.com").replace(/\/$/, "");
+export const API_BASE = `${API_HOST}/api`;
 
 export async function fetchJson(url, options = {}) {
   const res = await fetch(`${API_BASE}${url}`, {

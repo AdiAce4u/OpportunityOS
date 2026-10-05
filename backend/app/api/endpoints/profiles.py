@@ -11,6 +11,7 @@ from app.models import UserProfile, Application
 from app.schemas.profile import ProfileCreate, ProfileResponse, SaveTailoredCVRequest
 from app.tools.cv_parser_engine import MasterCVParser
 from app.tools.resume_tailor_engine import ResumeTailorEngine
+from app.core.config import settings
 from pypdf import PdfReader
 
 router = APIRouter(prefix="/profiles", tags=["Profiles"])
@@ -280,7 +281,7 @@ def save_tailored_cv(
         "company": req.company,
         "role": req.role,
         "filename": cv_filename,
-        "pdf_url": f"http://localhost:8000/uploads/{cv_filename}",
+        "pdf_url": f"{settings.app_host}/uploads/{cv_filename}",
         "created_at": datetime.utcnow().strftime("%b %d, %Y • %I:%M %p"),
         "application_id": req.application_id
     }

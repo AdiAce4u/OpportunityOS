@@ -3,6 +3,7 @@ import hashlib
 from typing import Any
 from app.db.session import SessionLocal
 from app.models import Job
+from app.core.config import settings
 
 def compute_job_hash(company: str, title: str, url: str = "") -> str:
     """Computes deterministic SHA-256 fingerprint for cross-platform duplicate prevention."""
@@ -174,7 +175,7 @@ def parse_custom_jd(jd_text: str, custom_title: str = "", custom_company: str = 
         "preferred_skills": pref_skills,
         "education_requirements": ["B.Tech", "M.Tech", "Degree in CS / Robotics / Engineering"],
         "eligibility": {"graduation_year_min": grad_min, "graduation_year_max": grad_max},
-        "url": f"http://localhost:8000/portal/apply/{external_id}",
+        "url": f"{settings.app_host}/portal/apply/{external_id}",
         "application_method": "form",
         "source": "custom_jd_input"
     }

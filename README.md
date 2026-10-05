@@ -188,8 +188,8 @@ pip install -r requirements.txt
 # Run server with hot reload
 uvicorn app.main:app --reload --port 8000
 ```
-Backend API and mock career portal will be live at `http://localhost:8000`.
-Interactive OpenAPI docs are available at `http://localhost:8000/docs`.
+Backend API and mock career portal will be live at `http://localhost:8000` (or production at `https://opportunityos1.onrender.com`).
+Interactive OpenAPI docs are available at `http://localhost:8000/docs` (or `https://opportunityos1.onrender.com/docs`).
 
 ### 2. Frontend Setup
 ```bash

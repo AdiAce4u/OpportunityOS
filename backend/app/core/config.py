@@ -34,8 +34,8 @@ class Settings(BaseSettings):
     browser_slow_mo_ms: int = 100
     
     # App URLs
-    app_host: str = "http://localhost:8000"
-    frontend_url: str = "http://localhost:5173"
+    app_host: str = os.getenv("APP_HOST", "https://opportunityos1.onrender.com")
+    frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 @lru_cache
 def get_settings() -> Settings:
