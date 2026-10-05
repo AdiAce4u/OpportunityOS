@@ -1,3 +1,7 @@
+import os
+
+APP_HOST = os.getenv("APP_HOST", "https://opportunityos1.onrender.com").rstrip("/")
+
 MOCK_JOBS = [
     {
         "external_id": "xyz-robotics-001",
@@ -6,7 +10,7 @@ MOCK_JOBS = [
         "location": "Bangalore",
         "salary_text": "₹50,000/month",
         "description": "Robot autonomy, ROS2, Python, C++ and simulation.",
-        "url": "http://localhost:8000/api/mock-apply/xyz-robotics-001",
+        "url": f"{APP_HOST}/api/mock-apply/xyz-robotics-001",
         "required_skills": ["Python","C++","ROS2","Robotics"],
         "eligibility": {"graduation_year_min": 2026, "graduation_year_max": 2028}
     },
@@ -17,7 +21,7 @@ MOCK_JOBS = [
         "location": "Remote",
         "salary_text": "₹45,000/month",
         "description": "ML pipelines, Python services and model evaluation.",
-        "url": "http://localhost:8000/api/mock-apply/abc-ai-002",
+        "url": f"{APP_HOST}/api/mock-apply/abc-ai-002",
         "required_skills": ["Python","Machine Learning","SQL"],
         "eligibility": {"graduation_year_min": 2026, "graduation_year_max": 2028}
     },
@@ -28,7 +32,7 @@ MOCK_JOBS = [
         "location": "Hyderabad",
         "salary_text": "₹55,000/month",
         "description": "Perception, controls, ROS2 and autonomous navigation.",
-        "url": "http://localhost:8000/api/mock-apply/def-auto-003",
+        "url": f"{APP_HOST}/api/mock-apply/def-auto-003",
         "required_skills": ["ROS2","C++","Python","Controls","Robotics"],
         "eligibility": {"graduation_year_min": 2026, "graduation_year_max": 2028}
     },
@@ -39,7 +43,7 @@ MOCK_JOBS = [
         "location": "Pune",
         "salary_text": "₹35,000/month",
         "description": "Data analysis, Python, SQL and machine learning.",
-        "url": "http://localhost:8000/api/mock-apply/ghi-data-004",
+        "url": f"{APP_HOST}/api/mock-apply/ghi-data-004",
         "required_skills": ["Python","SQL","Machine Learning"],
         "eligibility": {"graduation_year_min": 2026, "graduation_year_max": 2029}
     }

@@ -26,7 +26,7 @@ import {
   Heart,
   Save,
 } from "lucide-react";
-import { api } from "../services/api";
+import { api, API_BASE, API_HOST } from "../services/api";
 
 export function ApplicationReviewModal({ application, onClose, onApprove, onReject, onProvideMissingInfo, onProfileUpdated, onToggleWishlist }) {
   if (!application) return null;
@@ -56,8 +56,8 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
   const research = application.company_research || {};
   const missingInfo = application.missing_information || [];
   const evidenceTable = application.evidence_table || why.evidence_table || [];
-  const resumePdfUrl = `http://localhost:8000/api/applications/${application.id}/resume-pdf`;
-  const portalUrl = job.url || (job.external_id ? `http://localhost:8000/portal/apply/${job.external_id}` : "http://localhost:8000/portal/apply/job-001");
+  const resumePdfUrl = `${API_BASE}/applications/${application.id}/resume-pdf`;
+  const portalUrl = job.url || (job.external_id ? `${API_HOST}/portal/apply/${job.external_id}` : `${API_HOST}/portal/apply/job-001`);
 
   const cleanCompany = (company || "Company").replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
   const cleanRole = (role || "Role").replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');

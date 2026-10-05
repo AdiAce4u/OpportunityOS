@@ -8,6 +8,7 @@ from app.models import Application, Job, UserProfile
 from app.schemas.application import ApprovalRequest, ApplicationResponse, ProvideMissingInfoRequest
 from app.tools.resume_tailor_engine import ResumeTailorEngine
 from app.agents.graph import submission_graph
+from app.core.config import settings
 
 router = APIRouter(prefix="/applications", tags=["Applications"])
 
@@ -359,7 +360,7 @@ def prepare_portal(application_id: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "Application not found")
         
     job = db.get(Job, row.job_id)
-    job_url = (job.url if (job and job.url) else "http://localhost:8000/portal/apply/job-001")
+    job_url = (job.url if (job and job.url) else f"{settings.app_host}/portal/apply/job-001")
     
     return {
         "status": "PORTAL_READY",

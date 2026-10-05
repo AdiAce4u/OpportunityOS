@@ -5,6 +5,7 @@ from app.agents.state import JobState
 from app.agents.supervisor import log_event
 from app.db.session import SessionLocal
 from app.models import Application
+from app.core.config import settings
 
 def browser_agent_submit(state: JobState) -> JobState:
     """
@@ -23,7 +24,7 @@ def browser_agent_submit(state: JobState) -> JobState:
             return state
             
         selected = state.get("selected_job") or {}
-        url = selected.get("url") or f"http://localhost:8000/portal/apply/{selected.get('external_id')}"
+        url = selected.get("url") or f"{settings.app_host}/portal/apply/{selected.get('external_id')}"
         app_code = f"APP-{uuid.uuid4().hex[:8].upper()}"
         
         result = {
