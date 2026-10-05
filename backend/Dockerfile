@@ -27,9 +27,8 @@ RUN playwright install --with-deps chromium
 # Create directories for dynamic uploads and screenshots
 RUN mkdir -p /app/uploads /app/screenshots
 
-# Copy application source code and tests
+# Copy application source code
 COPY app ./app
-COPY tests ./tests
 
 # Expose default port
 EXPOSE 8000
