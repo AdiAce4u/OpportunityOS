@@ -10,7 +10,6 @@ import { TopOpportunities } from "./components/TopOpportunities";
 import { ApplicationReviewModal } from "./components/ApplicationReviewModal";
 import { ApplicationsTable } from "./components/ApplicationsTable";
 import { ProfileEditor } from "./components/ProfileEditor";
-import { InterviewPrepModal } from "./components/InterviewPrepModal";
 import { CustomJDModal } from "./components/CustomJDModal";
 import { MasterCVVault } from "./components/MasterCVVault";
 import { PortalJobDiscovery } from "./components/PortalJobDiscovery";
@@ -19,7 +18,6 @@ import {
   Sparkles,
   Bot,
   Play,
-  Calendar,
   CheckCircle2,
   ExternalLink,
   ShieldCheck,
@@ -41,8 +39,6 @@ function OpportunityOSApp() {
 
   // Modals
   const [selectedApp, setSelectedApp] = useState(null);
-  const [interviewEvent, setInterviewEvent] = useState(null);
-  const [interviewPrep, setInterviewPrep] = useState(null);
   const [isCustomJDOpen, setIsCustomJDOpen] = useState(false);
   const [activeGoal, setActiveGoal] = useState("Robotics or AI Internships in India (≥₹40,000/mo)");
   const [toastMessage, setToastMessage] = useState("");
@@ -277,16 +273,6 @@ function OpportunityOSApp() {
     }
   };
 
-  const handleOpenInterviewPrep = async (event) => {
-    setInterviewEvent(event);
-    try {
-      const prep = await api.getInterviewPrep(event.application_id);
-      setInterviewPrep(prep);
-    } catch (e) {
-      setInterviewPrep(null);
-    }
-  };
-
   const handleSaveProfile = async (updatedData) => {
     try {
       if (profile?.id) {
@@ -300,7 +286,6 @@ function OpportunityOSApp() {
   };
 
   const awaitingCount = applications.filter((a) => a.status === "AWAITING_APPROVAL").length;
-  const interviewEvents = trackerEvents.filter((e) => e.event_type === "INTERVIEW_INVITATION");
   const projectsCount = (profile?.categorized_projects || profile?.projects || []).length;
 
   return (
@@ -336,7 +321,6 @@ function OpportunityOSApp() {
         currentTab={currentTab}
         setTab={setTab}
         awaitingCount={awaitingCount}
-        interviewCount={interviewEvents.length}
         projectsCount={projectsCount}
       />
 
@@ -356,55 +340,6 @@ function OpportunityOSApp() {
         />
 
         <div className="page-body">
-          {/* Active Interview Banner if invitations detected */}
-          {interviewEvents.length > 0 && (
-            <div
-              style={{
-                background: "var(--banner-interview-bg)",
-                border: "1px solid var(--banner-interview-border)",
-                borderRadius: "12px",
-                padding: "16px 24px",
-                marginBottom: "24px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "16px",
-                boxShadow: "var(--card-shadow)",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                <div
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "10px",
-                    background: "var(--primary)",
-                    color: "white",
-                    display: "grid",
-                    placeItems: "center",
-                  }}
-                >
-                  <Calendar size={20} />
-                </div>
-                <div>
-                  <h4 style={{ fontSize: "15px", fontWeight: "700", color: "var(--banner-interview-title)" }}>
-                    {interviewEvents[0].company} invited you to an interview for {interviewEvents[0].role}!
-                  </h4>
-                  <p style={{ fontSize: "12.5px", color: "var(--banner-interview-sub)", marginTop: "2px", fontWeight: "500" }}>
-                    Follow-up Agent detected an interview invitation: {interviewEvents[0].interview_details?.date || "Scheduled this week"}.
-                  </p>
-                </div>
-              </div>
-
-              <button
-                className="btn btn-primary"
-                onClick={() => handleOpenInterviewPrep(interviewEvents[0])}
-                style={{ whiteSpace: "nowrap" }}
-              >
-                <span>[PREPARE INTERVIEW]</span>
-              </button>
-            </div>
-          )}
 
           {/* TAB: DASHBOARD */}
           {currentTab === "dashboard" && (
@@ -528,14 +463,7 @@ function OpportunityOSApp() {
         />
       )}
 
-      {/* Interview Prep Modal */}
-      {interviewEvent && (
-        <InterviewPrepModal
-          event={interviewEvent}
-          prepData={interviewPrep}
-          onClose={() => setInterviewEvent(null)}
-        />
-      )}
+
 
       {/* Custom JD Analyzer Modal */}
       <CustomJDModal

@@ -9,7 +9,7 @@ import {
   Globe,
 } from "lucide-react";
 
-export function Sidebar({ currentTab, setTab, awaitingCount, interviewCount, projectsCount }) {
+export function Sidebar({ currentTab, setTab, awaitingCount, projectsCount }) {
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
     {

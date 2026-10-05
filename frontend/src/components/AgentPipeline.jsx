@@ -149,8 +149,8 @@ export function AgentPipeline({ currentStage = "idle" }) {
       agent: "Follow-up Agent",
       icon: <BellRing size={18} />,
       color: "#f59e0b",
-      summary: "Automated follow-ups, interview detection, prep guide.",
-      details: "Detects interview invitations, notifies user with [PREPARE INTERVIEW], drafts polite follow-up emails.",
+      summary: "Automated follow-ups and application tracking.",
+      details: "Tracks status updates, interview invitations, and drafts polite follow-up emails.",
     },
     {
       num: 14,
