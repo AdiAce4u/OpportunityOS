@@ -26,7 +26,7 @@ class LLMProvider:
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=self.api_key)
-                model = genai.GenerativeModel(settings.llm_model or "gemini-1.5-flash")
+                model = genai.GenerativeModel(settings.llm_model or "gemini-3.5-flash")
                 response = model.generate_content(f"{system_prompt}\n\n{prompt}" if system_prompt else prompt)
                 return response.text
             except Exception as e:

@@ -216,12 +216,13 @@ CANDIDATE MASTER CV (RAW TEXT):
 """
                 response = None
                 model_candidates = [
+                    "gemini-3.5-flash",
                     settings.llm_model,
+                    "gemini-2.5-flash",
+                    "gemini-1.5-flash",
                     "gemini-flash-latest",
                     "gemini-3.8-flash",
-                    "gemini-3.5-flash",
                     "gemini-3.5-flash-lite",
-                    "gemini-3.1-flash-lite",
                     "gemini-pro-latest"
                 ]
                 seen_models = set()
