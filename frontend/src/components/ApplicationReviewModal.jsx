@@ -49,6 +49,7 @@ export function ApplicationReviewModal({ application, onClose, onApprove, onReje
   const why = application.why_this_job || {};
   const research = application.company_research || {};
   const missingInfo = application.missing_information || [];
+  const evidenceTable = application.evidence_table || why.evidence_table || [];
   const resumePdfUrl = `${API_BASE}/applications/${application.id}/resume-pdf`;
   const portalUrl = job.url || (job.external_id ? `${API_HOST}/portal/apply/${job.external_id}` : `${API_HOST}/portal/apply/job-001`);
 
