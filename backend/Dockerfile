@@ -3,7 +3,8 @@ FROM python:3.12-slim
 # Prevent Python from writing .pyc files and enable unbuffered logging
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+    PORT=8000
 
 WORKDIR /app
 
@@ -30,16 +31,12 @@ RUN mkdir -p /app/uploads /app/screenshots
 COPY app ./app
 COPY tests ./tests
 
-# Copy pre-populated database and existing uploads
-COPY opportunityos.db ./opportunityos.db
-RUN mkdir -p uploads
-
-# Expose FastAPI backend port
+# Expose default port
 EXPOSE 8000
 
-# Container healthcheck
+# Container healthcheck supporting dynamic $PORT
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD curl -f http://localhost:8000/docs || exit 1
+    CMD sh -c "curl -f http://localhost:${PORT:-8000}/docs || exit 1"
 
-# Launch FastAPI with Uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Launch FastAPI with Uvicorn supporting dynamic cloud $PORT
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

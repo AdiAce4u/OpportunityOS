@@ -14,4 +14,7 @@ ENV/
 .gitignore
 .DS_Store
 screenshots/*.png
-opportunity_os.db
+uploads/*
+*.db
+*.sqlite
+*.sqlite3
