@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     llm_provider: str = os.getenv("LLM_PROVIDER", "gemini")
     llm_api_key: str = os.getenv("LLM_API_KEY", "")
     gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
-    llm_model: str = os.getenv("LLM_MODEL", "gemini-3.5-flash")
+    llm_model: str = os.getenv("LLM_MODEL", "gemini-2.5-flash")
     
     # Autonomous Agent Settings
     target_jobs_count: int = 15
