@@ -32,7 +32,7 @@ COPY tests ./tests
 
 # Copy pre-populated database and existing uploads
 COPY opportunityos.db ./opportunityos.db
-COPY uploads ./uploads
+RUN mkdir -p uploads
 
 # Expose FastAPI backend port
 EXPOSE 8000
